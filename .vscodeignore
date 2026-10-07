@@ -1,5 +1,12 @@
 # Only the extension itself goes into the package.
 .git/**
 .gitignore
+.mocharc.json
 *.vsix
+node_modules/**
+test/**
+coverage/**
+test-results/**
+.vscode-test/**
 scripts/package-vsix.sh
+scripts/test.sh

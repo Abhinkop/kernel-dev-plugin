@@ -1,0 +1,6 @@
+{
+	"spec": "test/unit/**/*.test.js",
+	"require": "test/helpers/setup.js",
+	"timeout": 60000,
+	"reporter": "spec"
+}
