@@ -180,7 +180,7 @@ class Kbuild {
 		const script = [
 			'set -e',
 			this.make(state.makeArgs, `${rel}/`),
-			`mods=$(cd ${sq(state.buildDir)} && find ${sq(rel)} -name '*.mod' | sed 's/[.]mod$/.ko/')`,
+			`mods=$(cd ${sq(state.buildDir)} && find ${sq(rel)} -name '*.mod' 2>/dev/null | sed 's/[.]mod$/.ko/' || true)`,
 			`if [ -n "$mods" ]; then ${this.make(state.makeArgs)} $mods; echo "==> modules:"; echo "$mods"; fi`,
 		].join('\n');
 		return runTask(this.folder, `Build ${rel}/`, 'bash', ['-c', script], { problemMatcher: ['$gcc'] });
