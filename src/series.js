@@ -235,6 +235,8 @@ class Series {
 
 	/** git clang-format: reformat only the lines changed since the base. */
 	async formatChanged() {
+		if (!require('./tools').onPath('git-clang-format'))
+			return vscode.window.showErrorMessage('Kernel: git clang-format is not installed (Debian/Ubuntu: sudo apt install clang-format).');
 		await this.refresh();
 		if (!this.info.mergeBase)
 			return vscode.window.showErrorMessage(`Kernel: ${this.info.error || 'no base for the series.'}`);

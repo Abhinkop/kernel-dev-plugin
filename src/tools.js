@@ -10,7 +10,7 @@ const { archInfo } = require('./arch');
 /**
  * One thing the workflow needs from the host.
  * @typedef {Object} Requirement
- * @property {'build'|'run'|'debug'} step
+ * @property {'build'|'run'|'debug'|'check'|'git'} step
  * @property {string} what     binary name, header path, or a description
  * @property {string} [pkg]    Debian/Ubuntu package that provides it
  * @property {string} [hint]   what to do when there is no package
@@ -68,6 +68,18 @@ function requirements(s) {
 	const gdb = s.gdbPath();
 	reqs.push({ step: 'debug', what: gdb, pkg: gdb === 'gdb-multiarch' ? 'gdb-multiarch' : gdb === 'gdb' ? 'gdb' : undefined,
 		present: () => onPath(gdb) });
+
+	// Kernel Git tab: always git; b4 fetches series for the Apply view.
+	reqs.push({ step: 'git', what: 'git', pkg: 'git', present: () => onPath('git') });
+	reqs.push({ step: 'git', what: 'b4', pkg: 'b4', present: () => onPath('b4') });
+	// Optional patch checks, only when enabled.
+	if (s.get('check.sparse', false))
+		reqs.push({ step: 'check', what: 'sparse', pkg: 'sparse', present: () => onPath('sparse') });
+	if (s.get('check.coccinelle', false)) {
+		reqs.push({ step: 'check', what: 'spatch', pkg: 'coccinelle', present: () => onPath('spatch') });
+		// Some of the kernel's .cocci scripts use OCaml; coccicheck stops without it.
+		reqs.push({ step: 'check', what: 'ocamlopt', pkg: 'ocaml-nox', present: () => onPath('ocamlopt') || onPath('ocamlopt.opt') });
+	}
 	return reqs;
 }
 
