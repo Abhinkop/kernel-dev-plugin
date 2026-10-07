@@ -364,6 +364,11 @@
 				"command": "kernelDev.dt.checkAll",
 				"title": "DT Check: All dtbs (make dtbs_check)",
 				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.kunit.runDirectory",
+				"title": "Run KUnit Tests for This Directory",
+				"category": "Kernel"
 			}
 		],
 		"menus": {
@@ -614,6 +619,10 @@
 				},
 				{
 					"command": "kernelDev.dt.checkAll",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.kunit.runDirectory",
 					"when": "kernelDev.active"
 				}
 			],
@@ -884,6 +893,11 @@
 					"command": "kernelDev.buildDirectory",
 					"when": "kernelDev.active",
 					"group": "kernel@1"
+				},
+				{
+					"command": "kernelDev.kunit.runDirectory",
+					"when": "kernelDev.active",
+					"group": "kernel@2"
 				}
 			]
 		},
@@ -1275,6 +1289,22 @@
 						"type": "string",
 						"default": "patches/${branch}/v${version}",
 						"markdownDescription": "Where Generate patches writes the series, relative to the kernel tree or absolute. `${branch}` and `${version}` are substituted."
+					}
+				}
+			},
+			{
+				"title": "KUnit",
+				"order": 6,
+				"properties": {
+					"kernelDev.kunit.buildDirectory": {
+						"type": "string",
+						"default": "build/kunit/${arch}",
+						"markdownDescription": "Build directory for `kunit.py` (kept apart from your normal builds), relative to the kernel tree or absolute. `${arch}` is substituted."
+					},
+					"kernelDev.kunit.kunitconfig": {
+						"type": "string",
+						"default": "",
+						"markdownDescription": "`.kunitconfig` (file or directory) for the Testing view's runs, e.g. `lib/kunit` or `kernel/sched`. Empty: kunit.py's default set."
 					}
 				}
 			}
