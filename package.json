@@ -609,14 +609,6 @@
 						],
 						"description": "How Run and Debug boot the kernel."
 					},
-					"kernelDev.run.busybox": {
-						"type": "object",
-						"additionalProperties": {
-							"type": "string"
-						},
-						"default": {},
-						"markdownDescription": "Path to a **statically linked** busybox per arch, used to build the initramfs. Example: `{ \"arm64\": \"/opt/busybox/arm64/busybox\" }`. For the host arch, `busybox` on PATH is used if not set."
-					},
 					"kernelDev.run.initramfs": {
 						"type": "object",
 						"additionalProperties": {

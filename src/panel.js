@@ -83,10 +83,10 @@ class KernelPanel {
 			return vscode.commands.executeCommand('kernelDev.followSelection');
 		case 'config':
 			return setConfig(s, m.value === '$browse' ? undefined : m.value);
-		case 'browseBusybox': {
-			const uri = await vscode.window.showOpenDialog({ title: `Static busybox for ${s.arch}`, canSelectMany: false });
+		case 'browseInitramfs': {
+			const uri = await vscode.window.showOpenDialog({ title: `Initramfs for ${s.arch}`, canSelectMany: false });
 			if (uri)
-				await this.update('run.busybox', { ...s.get('run.busybox', {}), [s.arch]: uri[0].fsPath });
+				await this.update('run.initramfs', { ...s.get('run.initramfs', {}), [s.arch]: uri[0].fsPath });
 			return;
 		}
 		case 'option':
@@ -138,8 +138,15 @@ class KernelPanel {
 		}
 		case 'crossCompile':
 			return this.update(key, { ...s.get('crossCompile', {}), [s.arch]: text });
-		case 'run.busybox':
-			return this.update(key, { ...s.get('run.busybox', {}), [s.arch]: text });
+		case 'run.initramfs': {
+			/** @type {Record<string, string>} */
+			const map = { ...s.get('run.initramfs', {}) };
+			if (text.trim())
+				map[s.arch] = text.trim();
+			else
+				delete map[s.arch];
+			return this.update(key, map);
+		}
 		}
 	}
 
@@ -184,8 +191,8 @@ class KernelPanel {
 				'configure.fragments': s.get('configure.fragments', /** @type {string[]} */ ([])).join(' '),
 				'configure.options': Object.entries(s.get('configure.options', /** @type {Record<string,string>} */ ({})))
 					.map(([k, v]) => `${k}=${v}`).join('\n'),
-				'run.mode': s.get('run.mode', 'initramfs'),
-				'run.busybox': s.get('run.busybox', /** @type {Record<string,string>} */ ({}))[s.arch] ?? '',
+				'run.mode': s.get('run.mode', 'qemu'),
+				'run.initramfs': s.get('run.initramfs', /** @type {Record<string,string>} */ ({}))[s.arch] ?? '',
 				'run.qemuArgs': joinArgs(s.get('run.qemuArgs', /** @type {string[]} */ ([]))),
 				'run.cmdline': s.get('run.cmdline', ''),
 				'run.memory': s.get('run.memory', '2G'),
@@ -295,9 +302,9 @@ function html(nonce) {
 
 	<h3>Run options</h3>
 	<label for="mode">Boot with</label>
-	<select id="mode" data-opt="run.mode"><option value="initramfs">Busybox initramfs</option><option value="virtme">virtme-ng (host rootfs)</option></select>
-	<label for="busybox">Static busybox for <span class="archName"></span></label>
-	<div class="row"><input id="busybox" data-opt="run.busybox" placeholder="busybox on PATH (host arch)"><button class="secondary fit" id="browseBusybox">…</button></div>
+	<select id="mode" data-opt="run.mode"><option value="qemu">QEMU</option><option value="virtme">virtme-ng (host rootfs)</option></select>
+	<label for="initramfs">Initramfs for <span class="archName"></span></label>
+	<div class="row"><input id="initramfs" data-opt="run.initramfs" placeholder="none: boot without initramfs"><button class="secondary fit" id="browseInitramfs">…</button></div>
 	<label for="cmdline">Kernel command line</label>
 	<input id="cmdline" data-opt="run.cmdline" placeholder="loglevel=8">
 	<label for="qemuArgs">Extra QEMU arguments</label>
@@ -320,7 +327,7 @@ function html(nonce) {
 	$('variant').addEventListener('change', e => vscode.postMessage({ type: 'variant', value: e.target.value }));
 	$('config').addEventListener('change', e => vscode.postMessage({ type: 'config', value: e.target.value }));
 	$('browseConfig').addEventListener('click', () => vscode.postMessage({ type: 'config', value: '$browse' }));
-	$('browseBusybox').addEventListener('click', () => vscode.postMessage({ type: 'browseBusybox' }));
+	$('browseInitramfs').addEventListener('click', () => vscode.postMessage({ type: 'browseInitramfs' }));
 	document.querySelectorAll('[data-opt]').forEach(el =>
 		el.addEventListener('change', () => vscode.postMessage({ type: 'option', key: el.dataset.opt, value: el.value })));
 
