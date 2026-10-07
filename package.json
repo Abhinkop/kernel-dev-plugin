@@ -4,7 +4,7 @@
 	"description": "Visual Studio-style kernel development: Configure / Build / Run / Debug in QEMU, plus a Kernel Git tab for patch series (checkpatch, W=1, format-patch, send-email), applying series from lore, blame, file history and bisect. No per-workspace files.",
 	"version": "0.6.2",
 	"publisher": "ajose",
-	"license": "GPL-2.0",
+	"license": "MIT",
 	"engines": {
 		"vscode": "^1.85.0"
 	},
