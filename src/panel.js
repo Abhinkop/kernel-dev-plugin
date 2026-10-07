@@ -4,9 +4,9 @@
 const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 const { ARCHES, isNative } = require('./arch');
 const { listConfigs, setConfig } = require('./ui');
+const { page } = require('./webview');
 
 /** @typedef {import('./settings').Settings} Settings */
 /** @typedef {import('./runner').Runner} Runner */
@@ -64,7 +64,7 @@ class KernelPanel {
 	resolveWebviewView(view) {
 		this.view = view;
 		view.webview.options = { enableScripts: true };
-		view.webview.html = html(crypto.randomBytes(16).toString('base64'));
+		view.webview.html = html();
 		view.webview.onDidReceiveMessage(m => this.onMessage(m));
 		view.onDidChangeVisibility(() => this.push());
 	}
@@ -217,40 +217,8 @@ function joinArgs(args) {
 	return args.map(a => /^[\w@%+=:,./-]+$/.test(a) ? a : `"${a.replace(/(["\\])/g, '\\$1')}"`).join(' ');
 }
 
-/** @param {string} nonce */
-function html(nonce) {
-	return `<!DOCTYPE html>
-<html><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
-<style>
-	body { padding: 4px 12px 16px; color: var(--vscode-foreground); font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); }
-	h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--vscode-descriptionForeground); margin: 16px 0 6px; font-weight: 600; }
-	label { display: block; margin: 8px 0 3px; color: var(--vscode-descriptionForeground); }
-	select, input, textarea { width: 100%; box-sizing: border-box; padding: 4px 6px; font: inherit;
-		color: var(--vscode-input-foreground); background: var(--vscode-input-background);
-		border: 1px solid var(--vscode-input-border, var(--vscode-dropdown-border, transparent)); border-radius: 2px; }
-	select { background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border-color: var(--vscode-dropdown-border); }
-	textarea { font-family: var(--vscode-editor-font-family); min-height: 4.5em; resize: vertical; }
-	input:focus, select:focus, textarea:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
-	.row { display: flex; gap: 6px; } .row > * { flex: 1; } .row > .fit { flex: 0 0 auto; width: auto; }
-	button { font: inherit; padding: 6px 8px; border: none; border-radius: 2px; cursor: pointer;
-		color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
-	button:hover { background: var(--vscode-button-hoverBackground); }
-	button.secondary { color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); }
-	button.secondary:hover { background: var(--vscode-button-secondaryHoverBackground); }
-	button:disabled { opacity: .5; cursor: default; }
-	.steps { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 4px; }
-	.steps button { padding: 8px; font-weight: 600; }
-	.tools { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; } .tools button { flex: 1; }
-	.status { margin: 8px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; }
-	.status dt { color: var(--vscode-descriptionForeground); } .status dd { margin: 0; overflow-wrap: anywhere; }
-	.hint { color: var(--vscode-descriptionForeground); font-size: 11px; margin-top: 3px; }
-	.busy { color: var(--vscode-charts-yellow, var(--vscode-foreground)); }
-	.missing { color: var(--vscode-errorForeground); }
-	a { color: var(--vscode-textLink-foreground); cursor: pointer; }
-</style></head>
-<body>
-	<h3>Target</h3>
+function html() {
+	return page(`	<h3>Target</h3>
 	<label for="arch">Architecture</label>
 	<select id="arch"></select>
 	<label for="variant">Build</label>
@@ -314,15 +282,10 @@ function html(nonce) {
 		<div><label for="smp">CPUs</label><input id="smp" data-opt="run.smp" type="number" min="1"></div>
 	</div>
 	<p class="hint">Options are saved to your user settings and apply to every kernel tree. <a data-cmd="kernelDev.openSettings">All settings…</a></p>
-
-<script nonce="${nonce}">
-	const vscode = acquireVsCodeApi();
-	const $ = id => document.getElementById(id);
+`, `
 	const fill = (sel, items, value) => {
 		sel.replaceChildren(...items.map(i => new Option(i.label, i.value, false, i.value === value)));
 	};
-	document.querySelectorAll('[data-cmd]').forEach(el =>
-		el.addEventListener('click', () => vscode.postMessage({ type: 'command', command: el.dataset.cmd })));
 	$('arch').addEventListener('change', e => vscode.postMessage({ type: 'arch', value: e.target.value }));
 	$('variant').addEventListener('change', e => vscode.postMessage({ type: 'variant', value: e.target.value }));
 	$('config').addEventListener('change', e => vscode.postMessage({ type: 'config', value: e.target.value }));
@@ -353,8 +316,7 @@ function html(nonce) {
 			if (document.activeElement !== el) el.value = st.options[el.dataset.opt];
 	});
 	vscode.postMessage({ type: 'ready' });
-</script>
-</body></html>`;
+`);
 }
 
-module.exports = { KernelPanel, splitArgs, joinArgs };
+module.exports = { KernelPanel, splitArgs, joinArgs, html };
