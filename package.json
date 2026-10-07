@@ -83,6 +83,24 @@
 				"category": "Kernel"
 			},
 			{
+				"command": "kernelDev.run",
+				"title": "Run (QEMU)",
+				"category": "Kernel",
+				"icon": "$(play)"
+			},
+			{
+				"command": "kernelDev.debug",
+				"title": "Debug (QEMU + gdb)",
+				"category": "Kernel",
+				"icon": "$(debug-alt)"
+			},
+			{
+				"command": "kernelDev.stop",
+				"title": "Stop VM",
+				"category": "Kernel",
+				"icon": "$(debug-stop)"
+			},
+			{
 				"command": "kernelDev.openSettings",
 				"title": "Open Settings",
 				"category": "Kernel",
@@ -130,6 +148,18 @@
 				{
 					"command": "kernelDev.assembleFile",
 					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.run",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.debug",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.stop",
+					"when": "kernelDev.active"
 				}
 			],
 			"editor/context": [
@@ -160,6 +190,16 @@
 				"command": "kernelDev.compileFile",
 				"key": "ctrl+f7",
 				"when": "kernelDev.active && editorLangId == c"
+			},
+			{
+				"command": "kernelDev.debug",
+				"key": "f5",
+				"when": "kernelDev.active && !inDebugMode"
+			},
+			{
+				"command": "kernelDev.run",
+				"key": "ctrl+f5",
+				"when": "kernelDev.active && !inDebugMode"
 			}
 		],
 		"configuration": [
@@ -339,6 +379,144 @@
 							"Close the terminal as soon as the step finishes (errors stay in the Problems panel)"
 						],
 						"description": "What happens to the terminal of Configure / Build / Clean / Full clean when it finishes."
+					}
+				}
+			},
+			{
+				"title": "Run",
+				"order": 3,
+				"properties": {
+					"kernelDev.run.mode": {
+						"type": "string",
+						"enum": [
+							"initramfs",
+							"virtme"
+						],
+						"default": "initramfs",
+						"markdownEnumDescriptions": [
+							"QEMU with an initramfs packed around your busybox",
+							"virtme-ng (`vng`), booting the host root filesystem"
+						],
+						"description": "How Run and Debug boot the kernel."
+					},
+					"kernelDev.run.busybox": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						},
+						"default": {},
+						"markdownDescription": "Path to a **statically linked** busybox per arch, used to build the initramfs. Example: `{ \"arm64\": \"/opt/busybox/arm64/busybox\" }`. For the host arch, `busybox` on PATH is used if not set."
+					},
+					"kernelDev.run.initramfs": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						},
+						"default": {},
+						"description": "Use this initramfs per arch instead of packing one from busybox."
+					},
+					"kernelDev.run.memory": {
+						"type": "string",
+						"default": "2G",
+						"description": "Guest memory (QEMU -m)."
+					},
+					"kernelDev.run.smp": {
+						"type": "integer",
+						"minimum": 1,
+						"default": 2,
+						"description": "Guest CPUs (QEMU -smp)."
+					},
+					"kernelDev.run.kvm": {
+						"type": "string",
+						"enum": [
+							"auto",
+							"on",
+							"off"
+						],
+						"default": "auto",
+						"description": "auto: use KVM when the arch is native and /dev/kvm is accessible."
+					},
+					"kernelDev.run.cmdline": {
+						"type": "string",
+						"default": "",
+						"description": "Extra kernel command line."
+					},
+					"kernelDev.run.qemuArgs": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"default": [],
+						"markdownDescription": "Extra QEMU arguments, e.g. `[\"-device\", \"virtio-rng-pci\"]`."
+					},
+					"kernelDev.run.virtmeArgs": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"default": [],
+						"description": "Extra vng arguments (virtme mode)."
+					},
+					"kernelDev.buildBeforeRun": {
+						"type": "boolean",
+						"default": true,
+						"description": "Run an incremental build before Run and Debug."
+					}
+				}
+			},
+			{
+				"title": "Debug",
+				"order": 4,
+				"properties": {
+					"kernelDev.debug.debugger": {
+						"type": "string",
+						"enum": [
+							"auto",
+							"cppdbg",
+							"gdb",
+							"lldb"
+						],
+						"default": "auto",
+						"markdownEnumDescriptions": [
+							"First installed of the below",
+							"ms-vscode.cpptools (VS Code)",
+							"webfreak.debug, Native Debug (VSCodium)",
+							"CodeLLDB (no lx-* gdb helpers)"
+						],
+						"description": "Debugger front end."
+					},
+					"kernelDev.debug.gdb": {
+						"type": "string",
+						"default": "",
+						"description": "gdb binary. Empty: gdb for the host arch, gdb-multiarch otherwise."
+					},
+					"kernelDev.debug.port": {
+						"type": "integer",
+						"default": 1234,
+						"description": "QEMU gdbstub TCP port."
+					},
+					"kernelDev.debug.breakAt": {
+						"type": "string",
+						"default": "start_kernel",
+						"description": "Run to this symbol (hardware breakpoint) before the debugger attaches, so normal breakpoints work. Empty: attach at reset."
+					},
+					"kernelDev.debug.stopOnEntry": {
+						"type": "boolean",
+						"default": false,
+						"description": "Stay paused at breakAt when the debugger attaches, instead of running to your breakpoints."
+					},
+					"kernelDev.debug.gdbCommands": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"default": [],
+						"description": "Extra gdb commands run when the debugger starts."
+					},
+					"kernelDev.debug.stopVmWhenDebuggingEnds": {
+						"type": "boolean",
+						"default": true,
+						"description": "Kill QEMU when the debug session ends."
 					}
 				}
 			}

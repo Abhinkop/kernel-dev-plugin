@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { Settings } = require('./src/settings');
 const { Kbuild } = require('./src/kbuild');
+const { Runner } = require('./src/runner');
 
 /** @param {vscode.ExtensionContext} context */
 function activate(context) {
@@ -17,6 +18,7 @@ function activate(context) {
 
 	const s = new Settings(context, folder);
 	const kbuild = new Kbuild(s);
+	const runner = new Runner(context, s, kbuild);
 
 	/** @param {'.o'|'.i'|'.s'} kind */
 	const compileCurrent = kind => () => {
@@ -36,6 +38,9 @@ function activate(context) {
 		['kernelDev.compileFile', compileCurrent('.o')],
 		['kernelDev.preprocessFile', compileCurrent('.i')],
 		['kernelDev.assembleFile', compileCurrent('.s')],
+		['kernelDev.run', () => runner.run()],
+		['kernelDev.debug', () => runner.debug()],
+		['kernelDev.stop', () => runner.stop()],
 		['kernelDev.openSettings', () => vscode.commands.executeCommand('workbench.action.openSettings', 'kernelDev')],
 	];
 	for (const [id, fn] of commands)
