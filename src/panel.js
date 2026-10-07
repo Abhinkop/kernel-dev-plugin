@@ -119,6 +119,7 @@ class KernelPanel {
 		case 'run.cmdline':
 		case 'run.memory':
 			return this.update(key, text);
+		case 'make.ccache':
 		case 'run.shareBuildDir':
 			return this.update(key, !!text);
 		case 'run.smp':
@@ -200,6 +201,7 @@ class KernelPanel {
 				'run.memory': s.get('run.memory', '2G'),
 				'run.smp': String(s.get('run.smp', 2)),
 				'run.shareBuildDir': s.get('run.shareBuildDir', false),
+				'make.ccache': s.get('make.ccache', false),
 			},
 		});
 	}
@@ -261,6 +263,7 @@ function html() {
 	<select id="toolchain" data-opt="toolchain"><option value="gcc">GCC</option><option value="llvm">LLVM (LLVM=1)</option></select>
 	<label for="crossCompile">CROSS_COMPILE for <span class="archName"></span></label>
 	<input id="crossCompile" data-opt="crossCompile" placeholder="default for this arch">
+	<label class="check"><input type="checkbox" id="ccache" data-opt="make.ccache"> Use ccache</label>
 	<label for="makeArgs">Extra make arguments</label>
 	<input id="makeArgs" data-opt="make.args" placeholder="W=1 KCFLAGS=-Og">
 	<label for="fragments">Config fragments</label>

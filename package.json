@@ -1028,6 +1028,11 @@
 						"default": {},
 						"markdownDescription": "`CROSS_COMPILE` prefix per arch for gcc builds. Defaults: `aarch64-linux-gnu-`, `riscv64-linux-gnu-`, `x86_64-linux-gnu-` (none for the host arch)."
 					},
+					"kernelDev.make.ccache": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Compile through ccache: Configure records `CC=\"ccache gcc\"` (with the cross prefix) or `CC=\"ccache clang\"`. Rebuilds after switching branches or Debug/Release get much faster. Takes effect at the next Configure."
+					},
 					"kernelDev.make.args": {
 						"type": "array",
 						"items": {

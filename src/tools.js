@@ -33,6 +33,8 @@ function buildRequirements(makeArgs) {
 	if (!llvm && cross)
 		bins.push(['gcc', 'gcc']); // host programs (scripts/, tools/) are built with the host compiler
 	bins.push(['make', 'make'], ['flex', 'flex'], ['bison', 'bison'], ['bc', 'bc'], ['perl', 'perl'], ['python3', 'python3']);
+	if (makeArgs.some(a => /^CC=ccache /.test(a)))
+		bins.push(['ccache', 'ccache']);
 	return [
 		...bins.map(([bin, pkg]) => ({ step: /** @type {const} */ ('build'), what: bin, pkg, present: () => onPath(bin) })),
 		header('libelf/gelf.h', 'gelf.h', 'libelf-dev'),

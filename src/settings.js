@@ -102,12 +102,17 @@ class Settings {
 		const arch = this.arch;
 		const info = archInfo(arch);
 		const args = [`O=${this.buildDir()}`, `ARCH=${info.kernelArch}`];
+		const ccache = this.get('make.ccache', false);
 		if (this.get('toolchain', 'gcc') === 'llvm') {
 			args.push('LLVM=1', 'CROSS_COMPILE=');
+			if (ccache)
+				args.push('CC=ccache clang');
 		} else {
 			const prefixes = this.get('crossCompile', /** @type {Record<string,string>} */ ({}));
 			const prefix = prefixes[arch] ?? (isNative(arch) ? '' : info.gccPrefix);
 			args.push(`CROSS_COMPILE=${prefix}`);
+			if (ccache)
+				args.push(`CC=ccache ${prefix}gcc`);
 		}
 		return args.concat(this.get('make.args', /** @type {string[]} */ ([])));
 	}
