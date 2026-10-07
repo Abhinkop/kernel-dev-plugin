@@ -37,7 +37,7 @@ const GCC_ONLY_ARG = new RegExp(`^(${GCC_ONLY})$`);
  * @param {Configured} state
  */
 async function updateCompileCommands(root, state) {
-	if (!vscode.workspace.getConfiguration('kernelDev').get('clangd.updateCompileCommands', true))
+	if (!vscode.workspace.getConfiguration('kernelDev', vscode.Uri.file(root)).get('clangd.updateCompileCommands', true))
 		return;
 	const src = path.join(state.buildDir, 'compile_commands.json');
 	if (!fs.existsSync(src))

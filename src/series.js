@@ -335,7 +335,7 @@ class SeriesView {
 			return this.patches.set(m.key, value);
 		}
 		if (m.type === 'option') {
-			const cfg = vscode.workspace.getConfiguration('kernelDev');
+			const cfg = vscode.workspace.getConfiguration('kernelDev', this.series.s.folder.uri);
 			const value = m.key === 'checkpatch.ignore' ? String(m.value).split(/[\s,]+/).filter(Boolean) : m.value;
 			return cfg.update(m.key, value, vscode.ConfigurationTarget.Global).then(() => this.push());
 		}
@@ -368,7 +368,7 @@ class SeriesView {
 		const se = this.series;
 		const pa = this.patches;
 		const cover = await pa.cover();
-		const cfg = vscode.workspace.getConfiguration('kernelDev');
+		const cfg = vscode.workspace.getConfiguration('kernelDev', this.series.s.folder.uri);
 		this.view.webview.postMessage({
 			type: 'state',
 			branch: se.info.branch || '(detached HEAD)',

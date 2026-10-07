@@ -45,7 +45,7 @@ function makeTask(folder, name, command, args, opts = {}) {
 		new vscode.ProcessExecution(command, args, { cwd: opts.cwd || folder.uri.fsPath, env: opts.env }),
 		opts.problemMatcher || [],
 	);
-	const close = vscode.workspace.getConfiguration('kernelDev').get('terminal.afterTask') === 'close';
+	const close = vscode.workspace.getConfiguration('kernelDev', folder.uri).get('terminal.afterTask') === 'close';
 	task.presentationOptions = {
 		reveal: opts.reveal ?? vscode.TaskRevealKind.Always,
 		panel: vscode.TaskPanelKind.Dedicated,

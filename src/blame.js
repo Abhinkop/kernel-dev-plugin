@@ -100,7 +100,7 @@ function sourceOf(doc, root) {
  * @param {{ line?: number, cancel?: any }} [opts] line: 1-based, blame only that line
  */
 async function blame(root, src, opts = {}) {
-	const cfg = vscode.workspace.getConfiguration('kernelDev');
+	const cfg = vscode.workspace.getConfiguration('kernelDev', vscode.Uri.file(root));
 	const args = ['blame', '--porcelain'];
 	if (cfg.get('blame.ignoreWhitespace', true))
 		args.push('-w');

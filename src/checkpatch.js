@@ -58,9 +58,9 @@ function parse(out) {
 	return { findings, errors: count('ERROR'), warnings: count('WARNING'), checks: count('CHECK'), output: out };
 }
 
-/** checkpatch arguments from the settings. */
-function options() {
-	const cfg = vscode.workspace.getConfiguration('kernelDev');
+/** checkpatch arguments from the settings. @param {string} root */
+function options(root) {
+	const cfg = vscode.workspace.getConfiguration('kernelDev', vscode.Uri.file(root));
 	const args = ['--terse', '--showfile', '--show-types', '--color=never'];
 	if (cfg.get('checkpatch.strict', false))
 		args.push('--strict');
@@ -100,12 +100,12 @@ async function checkWorkingChanges(root) {
 	const diff = await git(root, ['diff', 'HEAD', '--no-color']);
 	if (!diff.trim())
 		return undefined;
-	return parse(await run(root, [...options(), '--no-signoff', '-'], diff));
+	return parse(await run(root, [...options(root), '--no-signoff', '-'], diff));
 }
 
 /** @param {string} root @param {string} commit */
 async function checkCommit(root, commit) {
-	return parse(await run(root, [...options(), '--git', commit]));
+	return parse(await run(root, [...options(root), '--git', commit]));
 }
 
 /**

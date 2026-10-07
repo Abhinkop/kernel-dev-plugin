@@ -941,7 +941,8 @@
 							"riscv64"
 						],
 						"default": "",
-						"description": "Default architecture for trees where none was picked in the Kernel panel. Empty: the host architecture."
+						"description": "Default architecture for trees where none was picked in the Kernel panel. Empty: the host architecture.",
+						"scope": "resource"
 					},
 					"kernelDev.variant": {
 						"type": "string",
@@ -950,12 +951,14 @@
 							"release"
 						],
 						"default": "debug",
-						"description": "Default build variant for trees where none was picked in the Kernel panel."
+						"description": "Default build variant for trees where none was picked in the Kernel panel.",
+						"scope": "resource"
 					},
 					"kernelDev.configure.defconfig": {
 						"type": "string",
 						"default": "defconfig",
-						"markdownDescription": "Default base config: one or more make targets (`defconfig`, `defconfig kvm_guest.config`, `tinyconfig`) or a path to a `.config` file. The status bar picker overrides it per arch."
+						"markdownDescription": "Default base config: one or more make targets (`defconfig`, `defconfig kvm_guest.config`, `tinyconfig`) or a path to a `.config` file. The status bar picker overrides it per arch.",
+						"scope": "resource"
 					},
 					"kernelDev.configure.fragments": {
 						"type": "array",
@@ -963,7 +966,8 @@
 							"type": "string"
 						},
 						"default": [],
-						"markdownDescription": "Config fragments merged after the base config (`scripts/kconfig/merge_config.sh`). Paths relative to the kernel tree, e.g. `kernel/configs/debug.config`."
+						"markdownDescription": "Config fragments merged after the base config (`scripts/kconfig/merge_config.sh`). Paths relative to the kernel tree, e.g. `kernel/configs/debug.config`.",
+						"scope": "resource"
 					},
 					"kernelDev.configure.options": {
 						"type": "object",
@@ -971,7 +975,8 @@
 							"type": "string"
 						},
 						"default": {},
-						"markdownDescription": "Kconfig options applied last, without the `CONFIG_` prefix: `\"y\"`, `\"n\"`, `\"m\"`, a number or a string. Example: `{ \"KASAN\": \"y\", \"LOG_BUF_SHIFT\": \"18\" }`."
+						"markdownDescription": "Kconfig options applied last, without the `CONFIG_` prefix: `\"y\"`, `\"n\"`, `\"m\"`, a number or a string. Example: `{ \"KASAN\": \"y\", \"LOG_BUF_SHIFT\": \"18\" }`.",
+						"scope": "resource"
 					},
 					"kernelDev.configure.debugOptions": {
 						"type": "object",
@@ -986,7 +991,8 @@
 							"DEBUG_INFO_SPLIT": "n",
 							"GDB_SCRIPTS": "y"
 						},
-						"markdownDescription": "Kconfig options for the **Debug** variant."
+						"markdownDescription": "Kconfig options for the **Debug** variant.",
+						"scope": "resource"
 					},
 					"kernelDev.configure.releaseOptions": {
 						"type": "object",
@@ -999,7 +1005,8 @@
 							"DEBUG_INFO_DWARF4": "n",
 							"DEBUG_INFO_DWARF5": "n"
 						},
-						"markdownDescription": "Kconfig options for the **Release** variant."
+						"markdownDescription": "Kconfig options for the **Release** variant.",
+						"scope": "resource"
 					},
 					"kernelDev.configure.qemuOptions": {
 						"type": "object",
@@ -1014,7 +1021,8 @@
 							"BINFMT_ELF": "y",
 							"BINFMT_SCRIPT": "y"
 						},
-						"markdownDescription": "Kconfig options applied when `kernelDev.run.mode` is `qemu`, so the kernel can boot from an initramfs given in `kernelDev.run.initramfs`."
+						"markdownDescription": "Kconfig options applied when `kernelDev.run.mode` is `qemu`, so the kernel can boot from an initramfs given in `kernelDev.run.initramfs`.",
+						"scope": "resource"
 					},
 					"kernelDev.configure.virtmeOptions": {
 						"type": "object",
@@ -1043,7 +1051,8 @@
 							"UNIX": "y",
 							"INET": "y"
 						},
-						"markdownDescription": "Kconfig options needed by virtme-ng (applied when `kernelDev.run.mode` is `virtme`)."
+						"markdownDescription": "Kconfig options needed by virtme-ng (applied when `kernelDev.run.mode` is `virtme`).",
+						"scope": "resource"
 					}
 				}
 			},
@@ -1058,7 +1067,8 @@
 							"llvm"
 						],
 						"default": "gcc",
-						"markdownDescription": "`gcc`: `CROSS_COMPILE=<prefix>` when cross compiling. `llvm`: `LLVM=1` for every arch. Takes effect at the next Configure."
+						"markdownDescription": "`gcc`: `CROSS_COMPILE=<prefix>` when cross compiling. `llvm`: `LLVM=1` for every arch. Takes effect at the next Configure.",
+						"scope": "resource"
 					},
 					"kernelDev.crossCompile": {
 						"type": "object",
@@ -1066,12 +1076,14 @@
 							"type": "string"
 						},
 						"default": {},
-						"markdownDescription": "`CROSS_COMPILE` prefix per arch for gcc builds. Defaults: `aarch64-linux-gnu-`, `riscv64-linux-gnu-`, `x86_64-linux-gnu-` (none for the host arch)."
+						"markdownDescription": "`CROSS_COMPILE` prefix per arch for gcc builds. Defaults: `aarch64-linux-gnu-`, `riscv64-linux-gnu-`, `x86_64-linux-gnu-` (none for the host arch).",
+						"scope": "resource"
 					},
 					"kernelDev.make.ccache": {
 						"type": "boolean",
 						"default": false,
-						"markdownDescription": "Compile through ccache: Configure records `CC=\"ccache gcc\"` (with the cross prefix) or `CC=\"ccache clang\"`. Rebuilds after switching branches or Debug/Release get much faster. Takes effect at the next Configure."
+						"markdownDescription": "Compile through ccache: Configure records `CC=\"ccache gcc\"` (with the cross prefix) or `CC=\"ccache clang\"`. Rebuilds after switching branches or Debug/Release get much faster. Takes effect at the next Configure.",
+						"scope": "resource"
 					},
 					"kernelDev.make.args": {
 						"type": "array",
@@ -1079,23 +1091,27 @@
 							"type": "string"
 						},
 						"default": [],
-						"markdownDescription": "Extra make arguments, recorded at Configure and used by every Build, e.g. `[\"W=1\"]`, `[\"CC=ccache gcc\"]`, `[\"KCFLAGS=-Og\"]`."
+						"markdownDescription": "Extra make arguments, recorded at Configure and used by every Build, e.g. `[\"W=1\"]`, `[\"CC=ccache gcc\"]`, `[\"KCFLAGS=-Og\"]`.",
+						"scope": "resource"
 					},
 					"kernelDev.make.jobs": {
 						"type": "integer",
 						"minimum": 0,
 						"default": 0,
-						"description": "make -j; 0 = number of CPUs."
+						"description": "make -j; 0 = number of CPUs.",
+						"scope": "resource"
 					},
 					"kernelDev.buildDirectory": {
 						"type": "string",
 						"default": "build/${arch}/${variant}",
-						"markdownDescription": "Build output (`O=`), relative to the kernel tree or absolute. `${arch}` and `${variant}` are substituted."
+						"markdownDescription": "Build output (`O=`), relative to the kernel tree or absolute. `${arch}` and `${variant}` are substituted.",
+						"scope": "resource"
 					},
 					"kernelDev.clangd.updateCompileCommands": {
 						"type": "boolean",
 						"default": true,
-						"markdownDescription": "After each build, write the build's `compile_commands.json` to the root of the tree for clangd (gcc-only flags stripped) and restart clangd."
+						"markdownDescription": "After each build, write the build's `compile_commands.json` to the root of the tree for clangd (gcc-only flags stripped) and restart clangd.",
+						"scope": "resource"
 					},
 					"kernelDev.terminal.afterTask": {
 						"type": "string",
@@ -1108,7 +1124,8 @@
 							"Keep the terminal open until you press a key",
 							"Close the terminal as soon as the step finishes (errors stay in the Problems panel)"
 						],
-						"description": "What happens to the terminal of Configure / Build / Clean / Full clean when it finishes."
+						"description": "What happens to the terminal of Configure / Build / Clean / Full clean when it finishes.",
+						"scope": "resource"
 					}
 				}
 			},
@@ -1127,7 +1144,8 @@
 							"QEMU, with the initramfs from `kernelDev.run.initramfs` if one is set",
 							"virtme-ng (`vng`), booting the host root filesystem"
 						],
-						"description": "How Run and Debug boot the kernel."
+						"description": "How Run and Debug boot the kernel.",
+						"scope": "resource"
 					},
 					"kernelDev.run.initramfs": {
 						"type": "object",
@@ -1135,18 +1153,21 @@
 							"type": "string"
 						},
 						"default": {},
-						"markdownDescription": "Initramfs to boot with, per arch, e.g. `{ \"arm64\": \"/srv/initramfs/arm64.cpio.gz\" }`. If none is set for the arch, the kernel boots without an initramfs (give `root=` in `kernelDev.run.cmdline` and a disk in `kernelDev.run.qemuArgs`)."
+						"markdownDescription": "Initramfs to boot with, per arch, e.g. `{ \"arm64\": \"/srv/initramfs/arm64.cpio.gz\" }`. If none is set for the arch, the kernel boots without an initramfs (give `root=` in `kernelDev.run.cmdline` and a disk in `kernelDev.run.qemuArgs`).",
+						"scope": "resource"
 					},
 					"kernelDev.run.memory": {
 						"type": "string",
 						"default": "2G",
-						"description": "Guest memory (QEMU -m)."
+						"description": "Guest memory (QEMU -m).",
+						"scope": "resource"
 					},
 					"kernelDev.run.smp": {
 						"type": "integer",
 						"minimum": 1,
 						"default": 2,
-						"description": "Guest CPUs (QEMU -smp)."
+						"description": "Guest CPUs (QEMU -smp).",
+						"scope": "resource"
 					},
 					"kernelDev.run.kvm": {
 						"type": "string",
@@ -1156,12 +1177,14 @@
 							"off"
 						],
 						"default": "auto",
-						"description": "auto: use KVM when the arch is native and /dev/kvm is accessible."
+						"description": "auto: use KVM when the arch is native and /dev/kvm is accessible.",
+						"scope": "resource"
 					},
 					"kernelDev.run.cmdline": {
 						"type": "string",
 						"default": "",
-						"description": "Extra kernel command line."
+						"description": "Extra kernel command line.",
+						"scope": "resource"
 					},
 					"kernelDev.run.qemuArgs": {
 						"type": "array",
@@ -1169,7 +1192,8 @@
 							"type": "string"
 						},
 						"default": [],
-						"markdownDescription": "Extra QEMU arguments, e.g. `[\"-device\", \"virtio-rng-pci\"]`."
+						"markdownDescription": "Extra QEMU arguments, e.g. `[\"-device\", \"virtio-rng-pci\"]`.",
+						"scope": "resource"
 					},
 					"kernelDev.run.virtmeArgs": {
 						"type": "array",
@@ -1177,17 +1201,20 @@
 							"type": "string"
 						},
 						"default": [],
-						"description": "Extra vng arguments (virtme mode)."
+						"description": "Extra vng arguments (virtme mode).",
+						"scope": "resource"
 					},
 					"kernelDev.buildBeforeRun": {
 						"type": "boolean",
 						"default": true,
-						"description": "Run an incremental build before Run and Debug."
+						"description": "Run an incremental build before Run and Debug.",
+						"scope": "resource"
 					},
 					"kernelDev.run.shareBuildDir": {
 						"type": "boolean",
 						"default": false,
-						"markdownDescription": "Share the build directory with the QEMU guest over 9p (read-only), so freshly built modules can be loaded with `insmod` without rebuilding the initramfs. Configure then enables the 9p and virtio options; Run shows the `mount` command for the guest."
+						"markdownDescription": "Share the build directory with the QEMU guest over 9p (read-only), so freshly built modules can be loaded with `insmod` without rebuilding the initramfs. Configure then enables the 9p and virtio options; Run shows the `mount` command for the guest.",
+						"scope": "resource"
 					}
 				}
 			},
@@ -1210,27 +1237,32 @@
 							"webfreak.debug, Native Debug (VSCodium)",
 							"CodeLLDB (no lx-* gdb helpers)"
 						],
-						"description": "Debugger front end."
+						"description": "Debugger front end.",
+						"scope": "resource"
 					},
 					"kernelDev.debug.gdb": {
 						"type": "string",
 						"default": "",
-						"description": "gdb binary. Empty: gdb for the host arch, gdb-multiarch otherwise."
+						"description": "gdb binary. Empty: gdb for the host arch, gdb-multiarch otherwise.",
+						"scope": "resource"
 					},
 					"kernelDev.debug.port": {
 						"type": "integer",
 						"default": 1234,
-						"description": "QEMU gdbstub TCP port."
+						"description": "QEMU gdbstub TCP port.",
+						"scope": "resource"
 					},
 					"kernelDev.debug.breakAt": {
 						"type": "string",
 						"default": "start_kernel",
-						"description": "Run to this symbol (hardware breakpoint) before the debugger attaches, so normal breakpoints work. Empty: attach at reset."
+						"description": "Run to this symbol (hardware breakpoint) before the debugger attaches, so normal breakpoints work. Empty: attach at reset.",
+						"scope": "resource"
 					},
 					"kernelDev.debug.stopOnEntry": {
 						"type": "boolean",
 						"default": false,
-						"description": "Stay paused at breakAt when the debugger attaches, instead of running to your breakpoints."
+						"description": "Stay paused at breakAt when the debugger attaches, instead of running to your breakpoints.",
+						"scope": "resource"
 					},
 					"kernelDev.debug.gdbCommands": {
 						"type": "array",
@@ -1238,12 +1270,14 @@
 							"type": "string"
 						},
 						"default": [],
-						"description": "Extra gdb commands run when the debugger starts."
+						"description": "Extra gdb commands run when the debugger starts.",
+						"scope": "resource"
 					},
 					"kernelDev.debug.stopVmWhenDebuggingEnds": {
 						"type": "boolean",
 						"default": true,
-						"description": "Kill QEMU when the debug session ends."
+						"description": "Kill QEMU when the debug session ends.",
+						"scope": "resource"
 					}
 				}
 			},
@@ -1254,22 +1288,26 @@
 					"kernelDev.blame.ignoreWhitespace": {
 						"type": "boolean",
 						"default": true,
-						"markdownDescription": "Blame with `-w`: whitespace-only changes don't count as changing a line."
+						"markdownDescription": "Blame with `-w`: whitespace-only changes don't count as changing a line.",
+						"scope": "resource"
 					},
 					"kernelDev.blame.detectMoves": {
 						"type": "boolean",
 						"default": false,
-						"markdownDescription": "Blame with `-M -C`: follow lines moved within the file or copied from other files changed in the same commit. Slower (about 6s instead of 2.4s on kernel/sched/core.c)."
+						"markdownDescription": "Blame with `-M -C`: follow lines moved within the file or copied from other files changed in the same commit. Slower (about 6s instead of 2.4s on kernel/sched/core.c).",
+						"scope": "resource"
 					},
 					"kernelDev.patches.base": {
 						"type": "string",
 						"default": "origin/master",
-						"markdownDescription": "Base of a patch series when the branch has no upstream and none was picked in the Series view: the series is the commits since its merge-base with this ref."
+						"markdownDescription": "Base of a patch series when the branch has no upstream and none was picked in the Series view: the series is the commits since its merge-base with this ref.",
+						"scope": "resource"
 					},
 					"kernelDev.checkpatch.strict": {
 						"type": "boolean",
 						"default": false,
-						"markdownDescription": "Run checkpatch with `--strict` (some subsystems, e.g. networking, expect it)."
+						"markdownDescription": "Run checkpatch with `--strict` (some subsystems, e.g. networking, expect it).",
+						"scope": "resource"
 					},
 					"kernelDev.checkpatch.ignore": {
 						"type": "array",
@@ -1277,22 +1315,26 @@
 							"type": "string"
 						},
 						"default": [],
-						"markdownDescription": "checkpatch types to ignore (`--ignore`), e.g. `[\"FILE_PATH_CHANGES\"]`."
+						"markdownDescription": "checkpatch types to ignore (`--ignore`), e.g. `[\"FILE_PATH_CHANGES\"]`.",
+						"scope": "resource"
 					},
 					"kernelDev.check.sparse": {
 						"type": "boolean",
 						"default": false,
-						"markdownDescription": "Also run sparse (`C=2`) on the touched files in Check series. Needs a sparse recent enough for the kernel."
+						"markdownDescription": "Also run sparse (`C=2`) on the touched files in Check series. Needs a sparse recent enough for the kernel.",
+						"scope": "resource"
 					},
 					"kernelDev.check.coccinelle": {
 						"type": "boolean",
 						"default": false,
-						"markdownDescription": "Also run `make coccicheck MODE=report` on the touched directories in Check series. Needs `coccinelle` and `ocaml-nox`."
+						"markdownDescription": "Also run `make coccicheck MODE=report` on the touched directories in Check series. Needs `coccinelle` and `ocaml-nox`.",
+						"scope": "resource"
 					},
 					"kernelDev.patches.outputDirectory": {
 						"type": "string",
 						"default": "patches/${branch}/v${version}",
-						"markdownDescription": "Where Generate patches writes the series, relative to the kernel tree or absolute. `${branch}` and `${version}` are substituted."
+						"markdownDescription": "Where Generate patches writes the series, relative to the kernel tree or absolute. `${branch}` and `${version}` are substituted.",
+						"scope": "resource"
 					}
 				}
 			},
@@ -1303,12 +1345,14 @@
 					"kernelDev.kunit.buildDirectory": {
 						"type": "string",
 						"default": "build/kunit/${arch}",
-						"markdownDescription": "Build directory for `kunit.py` (kept apart from your normal builds), relative to the kernel tree or absolute. `${arch}` is substituted."
+						"markdownDescription": "Build directory for `kunit.py` (kept apart from your normal builds), relative to the kernel tree or absolute. `${arch}` is substituted.",
+						"scope": "resource"
 					},
 					"kernelDev.kunit.kunitconfig": {
 						"type": "string",
 						"default": "",
-						"markdownDescription": "`.kunitconfig` (file or directory) for the Testing view's runs, e.g. `lib/kunit` or `kernel/sched`. Empty: kunit.py's default set."
+						"markdownDescription": "`.kunitconfig` (file or directory) for the Testing view's runs, e.g. `lib/kunit` or `kernel/sched`. Empty: kunit.py's default set.",
+						"scope": "resource"
 					}
 				}
 			}
