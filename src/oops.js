@@ -10,8 +10,11 @@ const { execFile } = require('child_process');
 
 const SCHEME = 'kernel-oops';
 
-// First line of a kernel crash report.
-const START = /\b(Oops|BUG:|WARNING:|Kernel panic - not syncing|general protection fault|Unable to handle kernel|kernel BUG at|Internal error:|BUG kernel NULL pointer)/;
+// First line of a kernel crash report, after the printk time and caller
+// prefixes. It is anchored so that messages merely containing "WARNING:"
+// (such as the SRSO mitigation notice) are not taken for a WARN() splat,
+// which reads "WARNING: CPU: n PID: n at ..." or "WARNING: file:line at ...".
+const START = /^\s*(?:\[[^\]]*\]\s*)*(Oops|BUG:|WARNING: (?:CPU:|\S+:\d+ at )|Kernel panic - not syncing|general protection fault|Unable to handle kernel|kernel BUG at|Internal error:|BUG kernel NULL pointer)/;
 // Last line of one.
 const END = /---\[ end (trace|Kernel panic)/;
 
