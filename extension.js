@@ -15,6 +15,7 @@ const tools = require('./src/tools');
 const { SCHEME, GitDocuments } = require('./src/commits');
 const { registerHistory } = require('./src/history');
 const { registerBlame } = require('./src/blame');
+const { registerSeries } = require('./src/series');
 
 /** @param {vscode.ExtensionContext} context */
 function activate(context) {
@@ -34,6 +35,7 @@ function activate(context) {
 
 	// Kernel Git tab.
 	context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(SCHEME, new GitDocuments(s.root)));
+	registerSeries(context, s);
 	registerBlame(context, s.root);
 	registerHistory(context, s.root);
 

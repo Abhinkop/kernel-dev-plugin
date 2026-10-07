@@ -269,6 +269,26 @@
 				"command": "kernelDev.blame.openOnLore",
 				"title": "Open on lore.kernel.org",
 				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.series.checkWorking",
+				"title": "Checkpatch Working Changes",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.series.check",
+				"title": "Check Series (checkpatch + W=1)",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.series.format",
+				"title": "Format Changed Lines (git clang-format)",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.series.pickBase",
+				"title": "Pick Series Base…",
+				"category": "Kernel"
 			}
 		],
 		"menus": {
@@ -444,6 +464,22 @@
 				{
 					"command": "kernelDev.blame.openOnLore",
 					"when": "false"
+				},
+				{
+					"command": "kernelDev.series.checkWorking",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.series.check",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.series.format",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.series.pickBase",
+					"when": "kernelDev.active"
 				}
 			],
 			"editor/context": [
@@ -1038,6 +1074,34 @@
 						"type": "boolean",
 						"default": false,
 						"markdownDescription": "Blame with `-M -C`: follow lines moved within the file or copied from other files changed in the same commit. Slower (about 6s instead of 2.4s on kernel/sched/core.c)."
+					},
+					"kernelDev.patches.base": {
+						"type": "string",
+						"default": "origin/master",
+						"markdownDescription": "Base of a patch series when the branch has no upstream and none was picked in the Series view: the series is the commits since its merge-base with this ref."
+					},
+					"kernelDev.checkpatch.strict": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Run checkpatch with `--strict` (some subsystems, e.g. networking, expect it)."
+					},
+					"kernelDev.checkpatch.ignore": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"default": [],
+						"markdownDescription": "checkpatch types to ignore (`--ignore`), e.g. `[\"FILE_PATH_CHANGES\"]`."
+					},
+					"kernelDev.check.sparse": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Also run sparse (`C=2`) on the touched files in Check series. Needs a sparse recent enough for the kernel."
+					},
+					"kernelDev.check.coccinelle": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Also run `make coccicheck MODE=report` on the touched directories in Check series. Needs `coccinelle` and `ocaml-nox`."
 					}
 				}
 			}
@@ -1067,6 +1131,12 @@
 			],
 			"kernelGit": [
 				{
+					"type": "webview",
+					"id": "kernelDev.series",
+					"name": "Series",
+					"when": "kernelDev.active"
+				},
+				{
 					"id": "kernelDev.blame",
 					"name": "Blame",
 					"when": "kernelDev.active"
@@ -1083,6 +1153,27 @@
 				"id": "kernelDev.target",
 				"label": "Kernel Target (arch / Debug-Release / config)",
 				"icon": "$(chip)"
+			}
+		],
+		"problemMatchers": [
+			{
+				"name": "kernel-coccinelle",
+				"owner": "coccinelle",
+				"source": "coccinelle",
+				"fileLocation": [
+					"relative",
+					"${workspaceFolder}"
+				],
+				"severity": "warning",
+				"pattern": {
+					"regexp": "^([^\\s:]+\\.[ch]):(\\d+):(\\d+)-(\\d+): (?:(ERROR|WARNING|INFO): ?)?(.*)$",
+					"file": 1,
+					"line": 2,
+					"column": 3,
+					"endColumn": 4,
+					"severity": 5,
+					"message": 6
+				}
 			}
 		]
 	}
