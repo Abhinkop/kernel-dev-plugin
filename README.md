@@ -8,7 +8,7 @@ extension and open a kernel source tree. You get:
   **Configure / Build / Run / Debug** buttons, and menuconfig / Clean /
   Rebuild / Full clean (mrproper) / Stop VM. It shows the state of each step and has an **Options**
   section where you edit toolchain, `CROSS_COMPILE`, make args, config
-  fragments and options, busybox path, QEMU args, kernel cmdline, memory, and CPUs.
+  fragments and options, initramfs path, QEMU args, kernel cmdline, memory, and CPUs.
 - **An editor toolbar** (top right of every editor) with a target dropdown
   that has checkmarks for arch and Debug/Release, plus the config picker and
   ⚙ Configure, 🔨 Build, ▶ Run, and 🐞 Debug buttons.
@@ -24,7 +24,7 @@ workspace override is respected if you add one.
 |---|---|---|
 | **Configure** | | Applies, in order: the selected base config (default `defconfig`), `configure.fragments`, the run-mode options, the Debug or Release options, then `configure.options`. Then it runs `make olddefconfig`. The make arguments used (`O=`, `ARCH=`, toolchain, `make.args`) are recorded in the build directory. Requested options that Kconfig dropped are listed. |
 | **Build** | F7 | Runs `make` with exactly the recorded arguments, and configures first if needed. Errors go to the Problems panel. Then it refreshes `compile_commands.json` for clangd. |
-| **Run** | Ctrl+F5 | Runs an incremental build, then boots the selected variant's kernel in QEMU. The rootfs is an initramfs packed around your busybox. |
+| **Run** | Ctrl+F5 | Runs an incremental build, then boots the selected variant's kernel in QEMU, with your initramfs if one is set for the arch. |
 | **Debug** | F5 | Runs an incremental build, boots QEMU paused, runs to `start_kernel`, and attaches gdb. Breakpoints work, including in initcalls, and the `lx-*` gdb commands are available. |
 
 - **Debug / Release** are separate build directories: `build/<arch>/debug` and
@@ -39,29 +39,26 @@ Also available:
 - `Kernel: menuconfig`, `Kernel: Clean`, `Kernel: Rebuild`, and
   `Kernel: Full Clean (mrproper)` in the command palette.
 
-## Rootfs: point it at busybox
+## Initramfs
 
-To boot, the kernel needs a rootfs. Set the path to a **statically linked**
-busybox for each arch you boot:
+Run and Debug boot the kernel image directly with QEMU (`-kernel`). If you
+set an initramfs for the arch, it is passed with `-initrd`:
 
 ```jsonc
-"kernelDev.run.busybox": {
-  "arm64":   "/opt/busybox/arm64/busybox",
-  "riscv64": "/opt/busybox/riscv64/busybox"
+"kernelDev.run.initramfs": {
+  "x86_64": "/srv/initramfs/x86_64.cpio.gz",
+  "arm64":  "/srv/initramfs/arm64.cpio.gz"
 }
 ```
 
-For the host arch, `busybox` on `PATH` is used if it is static (Debian/Ubuntu:
-`busybox-static`). The extension packs it into
-`<build dir>/kernel-dev/initramfs.cpio.gz` with the kernel's own
-`gen_init_cpio`. The `/init` script mounts proc, sys, dev, tmp, debugfs and
-tracefs, then drops to a shell. The initramfs is repacked whenever the busybox
-binary changes. It checks that the binary is static and matches the arch.
+If none is set, the kernel boots without an initramfs. Give it a root
+filesystem yourself with `kernelDev.run.cmdline` (e.g. `root=/dev/vda rw`)
+and `kernelDev.run.qemuArgs` (e.g. `-drive file=rootfs.img,if=virtio,format=raw`),
+or it stops with "VFS: Unable to mount root fs". A path that is set but
+doesn't exist is reported as an error rather than ignored.
 
-You can use your own image instead with
-`"kernelDev.run.initramfs": { "arm64": "/path/initramfs.cpio.gz" }`. With
-`"kernelDev.run.mode": "virtme"`, it boots the host rootfs with virtme-ng
-(`vng`) instead.
+With `"kernelDev.run.mode": "virtme"`, the kernel is booted with virtme-ng
+(`vng`) using the host's root filesystem instead.
 
 ## Settings
 
@@ -78,7 +75,7 @@ You can use your own image instead with
 | `kernelDev.make.jobs` | `0` | `0` = all CPUs |
 | `kernelDev.terminal.afterTask` | `waitForKey` | `waitForKey`: the step's terminal stays open until you press a key. `close`: it closes when the step finishes; errors stay in Problems |
 | `kernelDev.buildDirectory` | `build/${arch}/${variant}` | relative to the tree, or absolute |
-| `kernelDev.run.busybox` | `{}` | see above |
+| `kernelDev.run.initramfs` | `{}` | per arch; see above |
 | `kernelDev.run.memory` / `smp` / `kvm` | `2G` / `2` / `auto` | |
 | `kernelDev.run.cmdline` | `""` | extra kernel command line |
 | `kernelDev.run.qemuArgs` | `[]` | extra QEMU arguments |
@@ -124,7 +121,7 @@ Host packages (Debian/Ubuntu):
 ```sh
 sudo apt install build-essential flex bison bc libelf-dev libssl-dev \
                  qemu-system-x86 qemu-system-arm qemu-system-misc \
-                 gdb gdb-multiarch busybox-static
+                 gdb gdb-multiarch
 sudo apt install gcc-aarch64-linux-gnu gcc-riscv64-linux-gnu   # cross gcc
 sudo apt install clang lld llvm                                 # toolchain=llvm
 ```
@@ -132,7 +129,7 @@ sudo apt install clang lld llvm                                 # toolchain=llvm
 When the extension loads, and whenever you change arch, toolchain or run mode,
 it checks for everything Configure, Build, Run and Debug need. That covers the
 compiler or cross compiler, make, flex, bison, bc, perl, python3, the libelf and
-OpenSSL headers, QEMU or vng, busybox, and gdb. If something is missing it
+OpenSSL headers, QEMU or vng, the initramfs if you set one, and gdb. If something is missing it
 shows an error listing it by step, with the `apt-get install` command
 (*Run Install Command* / *Copy Command*). The Kernel panel shows the same under
 **Tools**. `Kernel: Check Required Tools` runs the check on demand.
