@@ -2,7 +2,7 @@
 	"name": "kernel-dev",
 	"displayName": "Kernel Dev: Configure, Build, Run, Debug",
 	"description": "Visual Studio-style kernel development: Configure / Build / Run / Debug in QEMU, plus a Kernel Git tab for patch series (checkpatch, W=1, format-patch, send-email), applying series from lore, blame, file history and bisect. No per-workspace files.",
-	"version": "0.6.0",
+	"version": "0.6.1",
 	"publisher": "ajose",
 	"license": "GPL-2.0",
 	"engines": {
@@ -1368,6 +1368,11 @@
 					"id": "kernelGit",
 					"title": "Kernel Git",
 					"icon": "media/git.svg"
+				},
+				{
+					"id": "kernelHistory",
+					"title": "History",
+					"icon": "media/history.svg"
 				}
 			]
 		},
@@ -1394,21 +1399,23 @@
 					"when": "kernelDev.active"
 				},
 				{
-					"id": "kernelDev.blame",
-					"name": "Blame",
-					"when": "kernelDev.active"
-				},
+					"type": "webview",
+					"id": "kernelDev.bisect",
+					"name": "Bisect",
+					"when": "kernelDev.active",
+					"visibility": "collapsed"
+				}
+			],
+			"kernelHistory": [
 				{
 					"id": "kernelDev.history",
 					"name": "File History",
 					"when": "kernelDev.active"
 				},
 				{
-					"type": "webview",
-					"id": "kernelDev.bisect",
-					"name": "Bisect",
-					"when": "kernelDev.active",
-					"visibility": "collapsed"
+					"id": "kernelDev.blame",
+					"name": "Blame",
+					"when": "kernelDev.active"
 				}
 			]
 		},

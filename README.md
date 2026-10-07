@@ -6,8 +6,8 @@ bar:
 
 - **Kernel** (chip icon): Configure · Build · Run · Debug the kernel in QEMU.
 - **Kernel Git** (branch icon): turn commits into a checked patch series,
-  send it, apply series from lore, and find out where code came from (Blame,
-  File History, Bisect).
+  send it, apply series from lore, and bisect.
+- **History** (clock icon): the open file's git history and blame.
 
 KUnit tests appear in VS Code's own **Testing** view.
 
@@ -206,6 +206,29 @@ you changed are reformatted.
    which open in the editor. **Continue** (refused while conflict markers
    remain), **Skip** and **Abort**.
 
+### Bisect
+
+- **Manual:** start with a bad and a good commit. Each step offers **Build**
+  and **Boot** (the Kernel tab's selection), then **Good / Bad / Skip**.
+- **Automatic:** `git bisect run` with your test script. Each step builds the
+  kernel first; a build failure skips the commit.
+- **Result:** the first bad commit opens, with *Copy Fixes: line*.
+
+---
+
+## History tab
+
+### File History
+
+- **List:** every commit that touched the open file, following renames, 200
+  at a time, filterable by message or author.
+- **Open a commit:** clicking one opens it as a **full editor tab**, read-only
+  and searchable. A toggle switches between the whole commit and this file
+  only.
+- **Right-click a commit:** copy hash, copy Fixes: line, open the file at that
+  commit, compare with the previous version, or open on lore.
+- **Selected lines:** *Show History of Selected Lines* (`git log -L`).
+
 ### Blame
 
 - **Annotations:** *Toggle Blame Annotations* (editor context menu) shows
@@ -219,25 +242,6 @@ you changed are reformatted.
   same line, to step past whitespace fixes and refactors.
 - **Options:** whitespace is ignored by default; `-M -C` move detection is
   optional (slower).
-
-### File History
-
-- **List:** every commit that touched the open file, following renames, 200
-  at a time, filterable by message or author.
-- **Open a commit:** clicking one opens it as a **full editor tab**, read-only
-  and searchable. A toggle switches between the whole commit and this file
-  only.
-- **Right-click a commit:** copy hash, copy Fixes: line, open the file at that
-  commit, compare with the previous version, or open on lore.
-- **Selected lines:** *Show History of Selected Lines* (`git log -L`).
-
-### Bisect
-
-- **Manual:** start with a bad and a good commit. Each step offers **Build**
-  and **Boot** (the Kernel tab's selection), then **Good / Bad / Skip**.
-- **Automatic:** `git bisect run` with your test script. Each step builds the
-  kernel first; a build failure skips the commit.
-- **Result:** the first bad commit opens, with *Copy Fixes: line*.
 
 ---
 
