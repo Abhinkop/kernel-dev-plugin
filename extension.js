@@ -14,6 +14,7 @@ const { ARCHES } = require('./src/arch');
 const tools = require('./src/tools');
 const { SCHEME, GitDocuments } = require('./src/commits');
 const { registerHistory } = require('./src/history');
+const { registerBlame } = require('./src/blame');
 
 /** @param {vscode.ExtensionContext} context */
 function activate(context) {
@@ -33,6 +34,7 @@ function activate(context) {
 
 	// Kernel Git tab.
 	context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(SCHEME, new GitDocuments(s.root)));
+	registerBlame(context, s.root);
 	registerHistory(context, s.root);
 
 	// Check the host for everything the current selection needs: when the

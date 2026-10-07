@@ -242,6 +242,33 @@
 				"title": "Open on lore.kernel.org",
 				"category": "Kernel",
 				"icon": "$(link-external)"
+			},
+			{
+				"command": "kernelDev.blame.toggle",
+				"title": "Toggle Blame Annotations",
+				"category": "Kernel",
+				"icon": "$(person)"
+			},
+			{
+				"command": "kernelDev.blame.before",
+				"title": "Blame Before This Commit",
+				"category": "Kernel",
+				"icon": "$(history)"
+			},
+			{
+				"command": "kernelDev.blame.copyFixes",
+				"title": "Copy Fixes: Line",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.blame.copyHash",
+				"title": "Copy Commit Hash",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.blame.openOnLore",
+				"title": "Open on lore.kernel.org",
+				"category": "Kernel"
 			}
 		],
 		"menus": {
@@ -397,6 +424,26 @@
 				{
 					"command": "kernelDev.git.openOnLore",
 					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.blame.toggle",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.blame.before",
+					"when": "false"
+				},
+				{
+					"command": "kernelDev.blame.copyFixes",
+					"when": "false"
+				},
+				{
+					"command": "kernelDev.blame.copyHash",
+					"when": "false"
+				},
+				{
+					"command": "kernelDev.blame.openOnLore",
+					"when": "false"
 				}
 			],
 			"editor/context": [
@@ -424,6 +471,11 @@
 					"command": "kernelDev.history.showLines",
 					"when": "kernelDev.active && resourceScheme == file && editorHasSelection",
 					"group": "kernelGit@2"
+				},
+				{
+					"command": "kernelDev.blame.toggle",
+					"when": "kernelDev.active && (resourceScheme == file || resourceScheme == kernel-git && resourcePath =~ /^\\/blob\\//)",
+					"group": "kernelGit@0"
 				}
 			],
 			"kernelDev.target": [
@@ -527,6 +579,11 @@
 					"command": "kernelDev.git.copyHash",
 					"when": "resourceScheme == kernel-git && resourcePath =~ /^\\/(commit|full|file)\\//",
 					"group": "1_kernel@2"
+				},
+				{
+					"command": "kernelDev.blame.toggle",
+					"when": "kernelDev.active && (resourceScheme == file || resourceScheme == kernel-git && resourcePath =~ /^\\/blob\\//)",
+					"group": "1_kernel@0"
 				}
 			],
 			"view/title": [
@@ -569,6 +626,11 @@
 					"command": "kernelDev.history.refresh",
 					"when": "view == kernelDev.history",
 					"group": "navigation@3"
+				},
+				{
+					"command": "kernelDev.blame.toggle",
+					"when": "view == kernelDev.blame",
+					"group": "navigation@1"
 				}
 			],
 			"view/item/context": [
@@ -596,6 +658,31 @@
 					"command": "kernelDev.git.openOnLore",
 					"when": "view == kernelDev.history && viewItem == commit",
 					"group": "2_open@3"
+				},
+				{
+					"command": "kernelDev.blame.before",
+					"when": "view == kernelDev.blame && viewItem == blameCommit",
+					"group": "inline"
+				},
+				{
+					"command": "kernelDev.blame.before",
+					"when": "view == kernelDev.blame && viewItem == blameCommit",
+					"group": "1_blame@1"
+				},
+				{
+					"command": "kernelDev.blame.copyFixes",
+					"when": "view == kernelDev.blame && viewItem == blameCommit",
+					"group": "2_copy@1"
+				},
+				{
+					"command": "kernelDev.blame.copyHash",
+					"when": "view == kernelDev.blame && viewItem == blameCommit",
+					"group": "2_copy@2"
+				},
+				{
+					"command": "kernelDev.blame.openOnLore",
+					"when": "view == kernelDev.blame && viewItem == blameCommit",
+					"group": "3_open@1"
 				}
 			],
 			"explorer/context": [
@@ -937,6 +1024,22 @@
 						"description": "Kill QEMU when the debug session ends."
 					}
 				}
+			},
+			{
+				"title": "Git",
+				"order": 5,
+				"properties": {
+					"kernelDev.blame.ignoreWhitespace": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "Blame with `-w`: whitespace-only changes don't count as changing a line."
+					},
+					"kernelDev.blame.detectMoves": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Blame with `-M -C`: follow lines moved within the file or copied from other files changed in the same commit. Slower (about 6s instead of 2.4s on kernel/sched/core.c)."
+					}
+				}
 			}
 		],
 		"viewsContainers": {
@@ -963,6 +1066,11 @@
 				}
 			],
 			"kernelGit": [
+				{
+					"id": "kernelDev.blame",
+					"name": "Blame",
+					"when": "kernelDev.active"
+				},
 				{
 					"id": "kernelDev.history",
 					"name": "File History",
