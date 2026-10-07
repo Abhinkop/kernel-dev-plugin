@@ -1,55 +1,77 @@
 # Kernel Workbench
 
-Visual Studio-style Linux kernel development in VS Code and VSCodium. Install
-the extension and open a kernel source tree. Two tabs appear in the activity
-bar:
+A Visual Studio-style workflow for Linux kernel development in VS Code and
+VSCodium:
 
-- **Kernel** (chip icon): Configure · Build · Run · Debug the kernel in QEMU.
-- **Kernel Git** (branch icon): turn commits into a checked patch series,
-  send it, apply series from lore, and bisect.
-- **History** (clock icon): the open file's git history and blame.
+- configure, build, run and debug the kernel in QEMU;
+- prepare, check, send and apply patch series;
+- find where code came from with blame, file history and bisect.
+
+Install the extension and open a kernel source tree. Three tabs appear in the
+activity bar:
+
+| Tab | Views | For |
+|---|---|---|
+| **Kernel** (chip icon) | Kernel | Configure · Build · Run · Debug |
+| **Kernel Git** (branch icon) | Series · Apply · Bisect | Patch series, applying from lore, bisecting |
+| **History** (clock icon) | File History · Blame | Where code came from |
 
 KUnit tests appear in VS Code's own **Testing** view.
 
 Nothing is written into `.vscode/`. There is no `tasks.json`, no
 `launch.json`, and no project file. Options are VS Code settings
 (`kernelDev.*`), saved at user level, so every kernel tree uses them. A
-workspace override is respected if you add one.
+workspace value overrides them if you add one.
+
+The interface follows the [VS Code UX guidelines](https://code.visualstudio.com/api/ux-guidelines/overview):
+
+- every view is a native tree view, and empty views show welcome content;
+- actions are in each view's toolbar and its **…** menu;
+- the editor gets a single **Kernel Workbench** menu, shown only on kernel
+  source files (C, assembly, Kconfig, Makefiles, devicetree).
 
 ---
 
 ## Kernel tab
 
-The **Kernel panel** has three parts:
+The **Kernel** view has three groups. Each item shows its current value and
+has an edit action (pencil icon) that opens a quick pick or an input box.
 
-- dropdowns for **Architecture**, **Build** (Debug / Release) and **Base
-  config**;
-- buttons for **Configure / Build / Run / Debug**, plus menuconfig, Clean,
-  Rebuild, Full clean (mrproper) and Stop VM, with the state of each step;
-- an **Options** section for the toolchain, `CROSS_COMPILE`, ccache, make
-  args, config fragments and options, initramfs, kernel cmdline, QEMU args,
-  memory, CPUs, and sharing the build directory with the guest.
+- **Target:** Architecture (x86_64, arm64, riscv64), Build (Debug or Release)
+  and Base config (`defconfig`, the arch's `*_defconfig` files, `tinyconfig`,
+  or an existing `.config`).
+- **Status:** when the build was configured and built, whether the VM is
+  running, which tools are missing (with an install action), and the step
+  that's running.
+- **Options:** toolchain (GCC or LLVM), `CROSS_COMPILE`, ccache, extra make
+  arguments, config fragments and options, what happens to the terminal after
+  a step, boot mode, initramfs, sharing the build directory with the guest,
+  kernel command line, QEMU arguments, memory and CPUs.
 
-The same actions are also in an editor toolbar, top right of every source
-file. Its target dropdown has checkmarks for the arch and Debug/Release.
+The view's toolbar has **Configure**, **Build**, **Run** and **Debug**, or
+**Stop** while a VM runs. Its **…** menu has menuconfig, nconfig, Clean,
+Rebuild, Full Clean (mrproper), Build Modules, DT Check, Check Required Tools
+and Open Settings.
 
 | Step | Key | What it does |
 |---|---|---|
-| **Configure** | | Applies, in order: the base config (default `defconfig`), `configure.fragments`, the run-mode options, the Debug or Release options, then `configure.options`. Then it runs `make olddefconfig`. The make arguments (`O=`, `ARCH=`, toolchain, ccache, `make.args`) are recorded in the build directory. Requested options that Kconfig dropped are listed. |
+| **Configure** | | Applies, in order: the base config, `configure.fragments`, the run-mode options, the Debug or Release options, then `configure.options`. Then it runs `make olddefconfig`. The make arguments (`O=`, `ARCH=`, toolchain, ccache, `make.args`) are recorded in the build directory. Requested options that Kconfig dropped are listed. |
 | **Build** | F7 | Runs `make` with exactly the recorded arguments (configuring first if needed), with errors in Problems, and refreshes `compile_commands.json` for clangd. |
 | **Run** | Ctrl+F5 | Runs an incremental build, then boots the selected variant in QEMU, with your initramfs if one is set for the arch. |
-| **Debug** | F5 | Runs an incremental build, boots QEMU paused, runs to `start_kernel`, and attaches gdb. Breakpoints work, including in initcalls, and the `lx-*` gdb commands are available. |
+| **Debug** | F5 | Runs an incremental build, boots QEMU halted, runs to `start_kernel` and attaches gdb. Breakpoints work, including in initcalls, and the `lx-*` gdb commands are available. |
 
-- **Debug / Release** build into separate directories, `build/<arch>/debug`
-  and `build/<arch>/release`, like Visual Studio's `x64\Debug`. Switching
-  rebuilds nothing, and Run and Debug use the selected variant.
+- **Debug / Release** build into separate directories,
+  `build/<arch>/debug` and `build/<arch>/release`, like Visual Studio's
+  `x64\Debug`.
 - **Argument changes** take effect at the next Configure, as in CMake.
-- **Also available:**
-  - **Ctrl+F7** compiles the current file.
-  - Right-click a `.c` file for *Preprocess (.i)* / *Show Assembly (.s)*.
-  - *Build This Directory* (explorer / editor context menu) builds a
-    directory and links its modules.
-  - *Build Modules* runs `make modules`.
+- **Editor menu:** the editor toolbar's Kernel Workbench menu has the same
+  four steps and the target pickers.
+- **Right-click → Kernel Workbench:**
+  - Compile Current File (**Ctrl+F7**), Preprocess (`.i`) and Show Assembly
+    (`.s`);
+  - Build This Directory, which builds the directory and links its modules;
+  - Show File History, history of selected lines, blame, and Decode Stack
+    Trace.
 
 ### Initramfs
 
@@ -63,13 +85,13 @@ for the arch is passed with `-initrd`:
 - **None set:** the kernel boots without one. Give it a root filesystem with
   `kernelDev.run.cmdline` (e.g. `root=/dev/vda rw`) and
   `kernelDev.run.qemuArgs` (e.g. `-drive file=rootfs.img,if=virtio,format=raw`).
-- **Set but missing:** an error, not a silent boot without it.
+- **Set but missing:** that's an error, not a silent boot without it.
 - **virtme mode:** with `"kernelDev.run.mode": "virtme"`, virtme-ng boots the
   host's root filesystem instead.
 
 ### Modules without rebuilding the initramfs
 
-Tick **Share the build directory with the guest**
+With **Share build directory with the guest** on
 (`kernelDev.run.shareBuildDir`):
 
 - **QEMU:** gets the build directory as a read-only 9p share.
@@ -87,41 +109,31 @@ The VM's serial console is also logged to
 `<build dir>/kernel-dev/console.log`. The terminal and the Ctrl-A X monitor
 keys are unchanged.
 
-- **Detection:** when an Oops, BUG, WARNING, panic, or general protection
+- **Detection:** when an Oops, BUG, WARNING, panic or general protection
   fault appears, a notification names it.
 - **Decoding:** *Show Decoded Trace* runs `scripts/decode_stacktrace.sh`
-  against the build's `vmlinux` (with the matching `addr2line` for
-  LLVM/cross builds).
+  against the build's `vmlinux`.
 - **Result:** a tab where every `file:line` is a link, and the reliable
   frames in Problems.
-- **Pasted traces:** *Kernel: Decode Stack Trace* does the same for a trace
-  you select or copy, e.g. from a bug report.
+- **Pasted traces:** *Decode Stack Trace* does the same for a trace you select
+  or copy.
 
 ### Devicetree (arm64, riscv64)
 
-*DT Check: Changed Files* and *DT Check: All dtbs* run `CHECK_DTBS=y` on the
-affected boards, `yamllint` + `dt_binding_check` on changed binding schemas,
-or a full `dtbs_check`.
-
-- **Affected boards:** a changed `.dtsi` selects every board that includes it.
-- **Results:** dtc and schema errors go to Problems at the `.dts` line of the
-  node they are about.
-- **Needs:** `dtschema` (`pip install dtschema`) and `yamllint`.
-
-### ccache
-
-**Use ccache** records `CC="ccache gcc"` (with the cross prefix) or
-`CC="ccache clang"` at Configure, so rebuilds after switching branches,
-Debug/Release or bisecting mostly come from the cache.
+*DT Check: Changed Files* and *DT Check: All dtbs* check the affected boards
+(`CHECK_DTBS=y`, a changed `.dtsi` selects every board including it), lint and
+check changed binding schemas, or run a full `dtbs_check`. Results go to
+Problems at the node's line. This needs `dtschema` (`pip install dtschema`)
+and `yamllint`.
 
 ### clangd
 
 After each build, the build's `compile_commands.json` is written to the root
-of the tree (the kernel's `.gitignore` already ignores it) and clangd is
+of the tree (the kernel's `.gitignore` already ignores it), and clangd is
 restarted.
 
-- **GCC builds:** the flags clang rejects and the plain `-Werror` are
-  stripped, and the clang target is set.
+- **GCC builds:** the flags clang rejects and the plain `-Werror` are stripped,
+  and the clang target is set.
 - **Selection:** switching arch or variant re-points clangd at that build.
 - **Nothing else written:** no `.clangd` or settings. Turn it off with
   `kernelDev.clangd.updateCompileCommands`.
@@ -129,15 +141,12 @@ restarted.
 ### How Debug works
 
 1. QEMU starts with `-S` and a gdbstub. At reset the MMU is off, and on x86
-   the kernel isn't even decompressed yet, so an IDE's software breakpoints
-   would fail or be overwritten.
+   the kernel isn't decompressed yet, so an IDE's software breakpoints would
+   fail or be overwritten.
 2. A short-lived gdb runs the guest to `start_kernel` on a hardware breakpoint
    and disconnects, leaving QEMU paused there.
-3. The IDE debugger attaches with an in-memory configuration and inserts your
-   breakpoints.
-
-`vmlinux-gdb.py` is auto-loaded for the `lx-*` commands (prefix them with
-`-exec` in cpptools). Ending the session kills QEMU.
+3. The IDE debugger attaches and inserts your breakpoints. The front end is
+   cpptools in VS Code or Native Debug (`webfreak.debug`) in VSCodium.
 
 ---
 
@@ -147,72 +156,70 @@ restarted.
 
 A **series** is the commits of the current branch on top of a base.
 
-- **Base:** the one you pick in the view, else the branch's upstream, else
-  `kernelDev.patches.base` (`origin/master`).
-- **Version:** `vN` is kept per branch.
+- **Base:** the one you pick, else the branch's upstream, else
+  `kernelDev.patches.base` (`origin/master`). If none exists, a welcome view
+  asks for one.
+- **Commits:** each shows its checkpatch result as its icon. Hovering shows
+  the commit-message findings, and the inline action opens checkpatch's
+  report.
 
-**Check working changes** runs checkpatch on uncommitted changes.
+**Check Series** (toolbar) does:
 
-**Check series** does:
-
-- **checkpatch** on every commit, with `--strict` and an ignore list as
-  options. Each commit shows a pass, warning or error icon, and its report opens from
-  checkpatch's report.
+- **checkpatch** on every commit, plus `--strict` and an ignore list when set
+  in **Check options**.
 - **W=1** on every `.c` file the series touches, using the Kernel tab's build.
   This works even for files disabled in `.config`.
-- **sparse** (`C=2`), optional. If Kbuild skips sparse because it is missing
-  or too old for the kernel, that is reported instead of looking clean.
-- **Coccinelle** (`coccicheck MODE=report`), optional. It needs `coccinelle`
-  and `ocaml-nox`.
+- **sparse** (`C=2`) and **Coccinelle** (`coccicheck MODE=report`), when set
+  in Check options. If Kbuild skips sparse because it's missing or too old,
+  that's reported rather than looking clean.
 - **DT checks** when the series touches devicetree files.
 
-Findings go to Problems, on the right line of the working tree: findings from
-earlier commits are mapped through the later changes. Commit-message
-problems (Signed-off-by, Fixes: format, long lines) stay with the commit.
+Findings go to Problems on the right line of the working tree: findings from
+earlier commits are mapped through the later changes.
 
-**Format changed lines** runs `git clang-format` against the base: only lines
-you changed are reformatted.
+The **…** menu also has Check Working Changes and Format Changed Lines
+(`git clang-format` against the base).
 
-**Patches:**
+**Patches** group:
 
-- **Subject prefix:** `PATCH`, `PATCH net-next`, `RFC PATCH`, …
-- **Cover letter:** *Edit…* stores it as the git branch description, which
+- **Subject prefix** (`PATCH`, `PATCH net-next`, `RFC PATCH`, …).
+- **Cover letter:** stored as the git branch description, which
   `git format-patch` reads, so it survives regenerating.
-- **To / Cc:** *Fill from get_maintainer.pl* puts maintainers and reviewers in
-  To and lists in Cc. Both are editable.
-- **Generate patches:** `git format-patch -v N --cover-letter --base=… --to/--cc
+- **To / Cc:** *Fill Recipients from get_maintainer.pl* puts maintainers and
+  reviewers in To and lists in Cc. *Edit Recipients* opens them in a tab.
+- **Generate Patches:** `git format-patch -v N --cover-letter --base=… --to/--cc
   … -o patches/<branch>/v<N>`. If checkpatch reports **errors**, it lists them
-  and only continues on *Generate Anyway*.
-
-**Send:**
-
-- **Dry run** (`git send-email --dry-run`) lists every mail and every
-  recipient.
-- **Send…** is only enabled after a successful dry run of exactly these files.
-  It asks once and runs `git send-email` in a terminal, where SMTP can ask for
-  a password.
-- **SMTP:** configure it yourself (`git config --global sendemail.smtpServer …`).
+  and continues only on *Generate Anyway*.
+- **Send:**
+  - *Send Patches: Dry Run* (`git send-email --dry-run`) lists every mail and
+    recipient.
+  - *Send Patches…* is offered only after a successful dry run of exactly
+    these files, and asks once.
+  - Configure SMTP yourself (`git config --global sendemail.smtpServer …`).
 
 ### Apply: series from lore
 
-1. Paste a lore link or a Message-ID and press **Fetch**. `b4 am` takes the
-   latest version, puts the patches in order, collects Reviewed-by / Acked-by
-   / Tested-by from the replies, and adds `Link:` trailers.
-2. Check what you're about to apply: the subject, patches, base commit and
-   trailers. Local `.mbox` / `.patch` files work too.
-3. Apply with `git am -3`, either **on the current branch** or **on a new
-   branch** at the series' base commit.
-4. If `git am` stops, the view shows the patch number and conflicted files,
-   which open in the editor. **Continue** (refused while conflict markers
-   remain), **Skip** and **Abort**.
+1. *Fetch Series from lore…* takes a lore link or Message-ID. `b4 am` takes
+   the latest version, puts the patches in order and collects
+   Reviewed-by/Acked-by/Tested-by.
+2. The view shows the series, its base and the trailers before anything is
+   applied. *Apply mbox or Patch Files…* works with local files.
+3. *Apply to Current Branch* or *Apply on New Branch…* (at the series'
+   base-commit) runs `git am -3`.
+4. If `git am` stops, the view shows the patch and the conflicted files.
+   *Continue* (refused while conflict markers remain), *Skip* and *Abort* are
+   in the toolbar.
 
 ### Bisect
 
-- **Manual:** start with a bad and a good commit. Each step offers **Build**
-  and **Boot** (the Kernel tab's selection), then **Good / Bad / Skip**.
-- **Automatic:** `git bisect run` with your test script. Each step builds the
-  kernel first; a build failure skips the commit.
-- **Result:** the first bad commit opens, with *Copy Fixes: line*.
+- **Manual:** *Start Bisect…* asks for a bad and a good commit. Each step
+  shows the commit under test. Build and Run are in the **…** menu, and
+  **Good / Bad / Skip** in the toolbar.
+- **Automatic:** *Bisect Automatically with a Test Script…* runs
+  `git bisect run`. Each step builds the kernel first; a build failure skips
+  the commit.
+- **Result:** the first bad commit is shown, opens in a tab, and has *Copy
+  Fixes: Line*.
 
 ---
 
@@ -221,29 +228,25 @@ you changed are reformatted.
 ### File History
 
 - **List:** every commit that touched the open file, following renames, 200
-  at a time, filterable by message or author.
-- **Open a commit:** clicking one opens it as a **full editor tab**, read-only
-  and searchable. A toggle switches between the whole commit and this file
-  only.
-- **Right-click a commit:** copy hash, copy Fixes: line, open the file at that
-  commit, compare with the previous version, or open on lore.
-- **Selected lines:** *Show History of Selected Lines* (`git log -L`).
+  at a time with *Load more*.
+- **Filter:** by commit message or author, across the file's old names too.
+- **Open a commit:** clicking one opens it as a read-only editor tab. The tab's
+  toolbar switches between the whole commit and this file only.
+- **Right-click a commit:** copy its hash or `Fixes:` line, open the file at
+  that commit, compare with the previous version, or open on lore.
+- **Selected lines:** *Show History of Selected Lines* runs `git log -L`.
 
 ### Blame
 
-- **Annotations:** *Toggle Blame Annotations* (editor context menu) shows
-  hash, date and author per line. Unsaved edits stay aligned.
-- **Click the hash** to open that commit in a full tab. A commit too large
-  for an editor tab (the 2.6.12 import) opens as just this file's part of it.
-- **Hover:** links to open the commit, blame before it, or copy its Fixes:
-  line.
+- **Annotations:** *Toggle Blame Annotations* shows hash, date and author
+  before each line. Unsaved edits stay aligned.
+- **Click the hash** to open that commit. A commit too large for an editor tab
+  (the 2.6.12 import) opens as just this file's part of it.
 - **Blame view:** follows the cursor. It shows the commit that last changed
-  the line and every earlier commit that changed it (`git log -L`). The
-  bottom one introduced the line.
-- **Blame Before This Commit:** reopens the file as of the parent, at the
-  same line, to step past whitespace fixes and refactors.
-- **Options:** whitespace is ignored by default; `-M -C` move detection is
-  optional (slower).
+  the line and every earlier commit that changed it; the bottom one introduced
+  the line.
+- **Blame Before This Commit:** reopens the file as of the parent, at the same
+  line.
 
 ---
 
@@ -252,10 +255,9 @@ you changed are reformatted.
 - **What runs:** `tools/testing/kunit/kunit.py run` for the selected arch and
   toolchain, in its own build directory (`build/kunit/<arch>`).
 - **Tests:** suites and cases appear after the first run. A failure links to
-  its `EXPECTATION FAILED at file:line`, and single suites or tests can be
-  re-run.
-- **This directory:** *Run KUnit Tests for This Directory* uses the nearest
-  `.kunitconfig`.
+  its `EXPECTATION FAILED at file:line`.
+- **This directory:** *Run KUnit Tests for This Directory* (explorer) uses the
+  nearest `.kunitconfig`.
 
 ---
 
@@ -278,20 +280,13 @@ you changed are reformatted.
 | `kernelDev.patches.base` / `outputDirectory` | `origin/master` / `patches/${branch}/v${version}` | |
 | `kernelDev.checkpatch.strict` / `ignore` | `false` / `[]` | |
 | `kernelDev.check.sparse` / `coccinelle` | `false` / `false` | |
+| `kernelDev.apply.addLink` / `addSignoff` | `true` / `false` | |
 | `kernelDev.blame.ignoreWhitespace` / `detectMoves` | `true` / `false` | |
 | `kernelDev.kunit.buildDirectory` / `kunitconfig` | `build/kunit/${arch}` / `""` | |
 
-`Kernel: Open Settings` shows all of them.
+*Kernel: Open Settings* shows all of them.
 
-## Install
-
-No Node.js needed:
-
-```sh
-./scripts/package-vsix.sh            # -> kernel-workbench-<version>.vsix
-code   --install-extension kernel-workbench-<version>.vsix
-codium --install-extension kernel-workbench-<version>.vsix
-```
+## Requirements
 
 Host packages (Debian/Ubuntu):
 
@@ -305,8 +300,74 @@ sudo apt install sparse coccinelle ocaml-nox                    # optional check
 pip install dtschema                                            # devicetree checks
 ```
 
-The tool check runs when the extension loads and whenever you change arch,
-toolchain or options. It covers what Configure, Build, Run, Debug and the
-enabled checks need, and lists what's missing by step with the `apt-get
-install` command (*Run Install Command* / *Copy Command*). The Kernel panel
-shows the same under **Tools**.
+When the extension loads, and whenever you change the arch, toolchain or
+options, it checks for what Configure, Build, Run, Debug and the enabled
+checks need.
+
+- **Kernel view:** missing tools are listed under Status → Tools.
+- **Notification:** offers *Run Install Command*, *Copy Command* and *Don't
+  Show Again*.
+
+---
+
+## Development
+
+The extension is plain JavaScript checked by TypeScript (`// @ts-check`);
+there's no build step.
+
+```
+extension.js        activation: wires the parts together, registers commands
+src/settings.js     selection, kernelDev.* settings, recorded Configure arguments
+src/kbuild.js       Configure / Build / Clean / Full clean / single files / modules
+src/runner.js       QEMU Run and Debug, gdb hand-off (scripts/run-to.py)
+src/kernelView.js   Kernel view and option editing
+src/series.js       Series view and checks; patches.js (format-patch), send.js (send-email)
+src/checkpatch.js   checkpatch runs and Problems
+src/apply.js        Apply view (b4 am, git am)
+src/bisect.js       Bisect view (git bisect)
+src/history.js      File History view; commits.js: read-only commit tabs
+src/blame.js        blame annotations (inlay hints) and Blame view
+src/oops.js, dt.js, kunit.js, clangd.js, tools.js, ui.js, tasks.js, git.js, arch.js
+```
+
+### Tests
+
+```sh
+scripts/test.sh                 # type check, unit tests, integration tests in VS Code, coverage
+scripts/test.sh unit            # unit tests only
+KWB_E2E=1 scripts/test.sh       # also build, boot, crash and debug a real kernel (minutes)
+```
+
+`scripts/test.sh` runs everything in a container (`test/docker/Dockerfile`),
+so no Node.js is needed on the host.
+
+- **Unit tests** (`test/unit`): mocha, with a mock of the VS Code API
+  (`test/helpers/vscode.js`) and real git in throwaway repositories. External
+  tools (checkpatch.pl, get_maintainer.pl, b4, git send-email, make) are small
+  stand-in scripts, so the tests exercise the extension's logic.
+- **Integration tests** (`test/integration`): run in a real VS Code
+  (`@vscode/test-electron`) on a throwaway clone of a kernel tree
+  (`KWB_KERNEL_TREE`, default `../linux-playground`; it is never written to).
+  They drive commands, quick picks, tree views, Problems, inlay hints and
+  editor tabs, and use the tree's real checkpatch, get_maintainer.pl, git am,
+  git send-email `--dry-run` and git bisect.
+- **End to end** (`KWB_E2E=1`): configures and builds a defconfig kernel,
+  boots it in QEMU with an initramfs, crashes it and checks the decoded trace,
+  checks the debugger hand-off at `start_kernel`, runs W=1 with the build, and
+  runs KUnit.
+
+### Reports
+
+| File | Contents |
+|---|---|
+| `coverage/index.html` | Line, branch and function coverage of the unit and integration tests combined |
+| `test-results/coverage.md` | The same as a table |
+| `test-results/ui-performance.md` | How long each view, action and step took in the integration tests |
+| `test-results/unit.txt`, `integration.txt` | Test output |
+
+### Packaging
+
+```sh
+npx @vscode/vsce package     # or scripts/package-vsix.sh without Node.js
+code --install-extension kernel-workbench-<version>.vsix
+```
