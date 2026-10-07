@@ -31,6 +31,22 @@
 	"contributes": {
 		"commands": [
 			{
+				"command": "kernelDev.selectArch",
+				"title": "Select Architecture",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.selectVariant",
+				"title": "Select Debug / Release",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.selectConfig",
+				"title": "Select Base Config",
+				"category": "Kernel",
+				"icon": "$(file-code)"
+			},
+			{
 				"command": "kernelDev.configure",
 				"title": "Configure",
 				"category": "Kernel",
@@ -105,10 +121,57 @@
 				"title": "Open Settings",
 				"category": "Kernel",
 				"icon": "$(settings)"
+			},
+			{
+				"command": "kernelDev.arch.x86_64",
+				"title": "x86_64",
+				"category": "Kernel",
+				"toggled": "kernelDev.arch == x86_64"
+			},
+			{
+				"command": "kernelDev.arch.arm64",
+				"title": "arm64",
+				"category": "Kernel",
+				"toggled": "kernelDev.arch == arm64"
+			},
+			{
+				"command": "kernelDev.arch.riscv64",
+				"title": "riscv64",
+				"category": "Kernel",
+				"toggled": "kernelDev.arch == riscv64"
+			},
+			{
+				"command": "kernelDev.variant.debug",
+				"title": "Debug",
+				"category": "Kernel",
+				"toggled": "kernelDev.variant == debug"
+			},
+			{
+				"command": "kernelDev.variant.release",
+				"title": "Release",
+				"category": "Kernel",
+				"toggled": "kernelDev.variant == release"
+			},
+			{
+				"command": "kernelDev.followSelection",
+				"title": "Point clangd at Selected Build",
+				"category": "Kernel"
 			}
 		],
 		"menus": {
 			"commandPalette": [
+				{
+					"command": "kernelDev.selectArch",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.selectVariant",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.selectConfig",
+					"when": "kernelDev.active"
+				},
 				{
 					"command": "kernelDev.configure",
 					"when": "kernelDev.active"
@@ -160,6 +223,30 @@
 				{
 					"command": "kernelDev.stop",
 					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.arch.x86_64",
+					"when": "false"
+				},
+				{
+					"command": "kernelDev.arch.arm64",
+					"when": "false"
+				},
+				{
+					"command": "kernelDev.arch.riscv64",
+					"when": "false"
+				},
+				{
+					"command": "kernelDev.variant.debug",
+					"when": "false"
+				},
+				{
+					"command": "kernelDev.variant.release",
+					"when": "false"
+				},
+				{
+					"command": "kernelDev.followSelection",
+					"when": "false"
 				}
 			],
 			"editor/context": [
@@ -177,6 +264,84 @@
 					"command": "kernelDev.assembleFile",
 					"when": "kernelDev.active && resourceExtname == .c",
 					"group": "kernel@3"
+				}
+			],
+			"kernelDev.target": [
+				{
+					"command": "kernelDev.arch.x86_64",
+					"group": "1_arch@0"
+				},
+				{
+					"command": "kernelDev.arch.arm64",
+					"group": "1_arch@1"
+				},
+				{
+					"command": "kernelDev.arch.riscv64",
+					"group": "1_arch@2"
+				},
+				{
+					"command": "kernelDev.variant.debug",
+					"group": "2_variant@1"
+				},
+				{
+					"command": "kernelDev.variant.release",
+					"group": "2_variant@2"
+				},
+				{
+					"command": "kernelDev.selectConfig",
+					"group": "3_config@1"
+				},
+				{
+					"command": "kernelDev.menuconfig",
+					"group": "3_config@2"
+				},
+				{
+					"command": "kernelDev.clean",
+					"group": "4_tools@1"
+				},
+				{
+					"command": "kernelDev.rebuild",
+					"group": "4_tools@2"
+				},
+				{
+					"command": "kernelDev.mrproper",
+					"group": "4_tools@3"
+				},
+				{
+					"command": "kernelDev.openSettings",
+					"group": "5_settings@1"
+				}
+			],
+			"editor/title": [
+				{
+					"submenu": "kernelDev.target",
+					"when": "kernelDev.active",
+					"group": "navigation@-10"
+				},
+				{
+					"command": "kernelDev.configure",
+					"when": "kernelDev.active",
+					"group": "navigation@-9"
+				},
+				{
+					"command": "kernelDev.build",
+					"when": "kernelDev.active",
+					"group": "navigation@-8"
+				},
+				{
+					"command": "kernelDev.run",
+					"when": "kernelDev.active && !kernelDev.vmRunning",
+					"group": "navigation@-7"
+				},
+				{
+					"command": "kernelDev.debug",
+					"when": "kernelDev.active && !kernelDev.vmRunning",
+					"group": "navigation@-6"
+				},
+				{
+					"command": "kernelDev.stop",
+					"when": "kernelDev.active && kernelDev.vmRunning",
+					"group": "navigation@-5"
 				}
 			]
 		},
@@ -519,6 +684,13 @@
 						"description": "Kill QEMU when the debug session ends."
 					}
 				}
+			}
+		],
+		"submenus": [
+			{
+				"id": "kernelDev.target",
+				"label": "Kernel Target (arch / Debug-Release / config)",
+				"icon": "$(chip)"
 			}
 		]
 	}
