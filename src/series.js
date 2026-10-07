@@ -11,6 +11,7 @@ const checkpatch = require('./checkpatch');
 const { runTask, sq } = require('./tasks');
 const { page } = require('./webview');
 const { Patches } = require('./patches');
+const { Sender } = require('./send');
 
 /** @typedef {import('./git').Commit} Commit */
 /** @typedef {import('./checkpatch').Report} Report */
@@ -286,10 +287,11 @@ function summary(r) {
  * @implements {vscode.WebviewViewProvider}
  */
 class SeriesView {
-	/** @param {Series} series @param {Patches} patches */
-	constructor(series, patches) {
+	/** @param {Series} series @param {Patches} patches @param {Sender} sender */
+	constructor(series, patches, sender) {
 		this.series = series;
 		this.patches = patches;
+		this.sender = sender;
 		/** @type {vscode.WebviewView | undefined} */
 		this.view = undefined;
 		series.onDidChange(() => this.push());
@@ -335,6 +337,8 @@ class SeriesView {
 		case 'editCover': return this.patches.editCover();
 		case 'fillRecipients': return se.withBusy('get_maintainer.pl', () => this.patches.fillRecipients());
 		case 'generate': return this.patches.generate();
+		case 'dryRun': return se.withBusy('git send-email --dry-run', () => this.sender.dryRun());
+		case 'send': return this.sender.send();
 		case 'openPatch': return this.patches.output && vscode.window.showTextDocument(vscode.Uri.file(path.join(this.patches.output.dir, m.arg)), { preview: true });
 		case 'revealOutput': return this.patches.output && vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(path.join(this.patches.output.dir, this.patches.output.files[0])));
 		default: return vscode.commands.executeCommand(m.command);
@@ -373,6 +377,8 @@ class SeriesView {
 			multi: se.info.commits.length > 1,
 			outputDir: path.relative(se.root, pa.outputDir()),
 			output: pa.output ? { dir: path.relative(se.root, pa.output.dir), files: pa.output.files } : undefined,
+			smtp: this.sender.smtp || await this.sender.checkConfig(),
+			dry: this.sender.dry ? { ok: this.sender.dry.ok, mails: this.sender.dry.mails.length, current: this.sender.dryRunCurrent() } : undefined,
 			options: {
 				'checkpatch.strict': cfg.get('checkpatch.strict', false),
 				'checkpatch.ignore': /** @type {string[]} */ (cfg.get('checkpatch.ignore', [])).join(' '),
@@ -433,6 +439,16 @@ function html() {
 	<div id="outputBox">
 		<label>Generated <a data-cmd="revealOutput">(open folder)</a></label>
 		<ul id="output" class="list"></ul>
+		<h3>Send</h3>
+		<dl class="status">
+			<dt>SMTP</dt><dd id="smtp"></dd>
+			<dt>Dry run</dt><dd id="dry"></dd>
+		</dl>
+		<div class="tools">
+			<button class="secondary" data-cmd="dryRun" title="git send-email --dry-run: shows every mail and its recipients, sends nothing">Dry run</button>
+			<button data-cmd="send" id="send" title="Enabled after a successful dry run of these exact files">Send…</button>
+		</div>
+		<p class="hint">Configure SMTP yourself, e.g. git config --global sendemail.smtpServer smtp.example.com (and smtpUser, smtpServerPort, smtpEncryption).</p>
 	</div>
 `, `
 	document.querySelectorAll('[data-sopt]').forEach(el => el.addEventListener('change', () =>
@@ -464,6 +480,10 @@ function html() {
 		$('outputBox').style.display = st.output ? '' : 'none';
 		if (st.output) $('output').innerHTML = st.output.files.map(f =>
 			'<li data-cmd="openPatch" data-arg="' + esc(f) + '"><span class="grow mono">' + esc(f) + '</span></li>').join('');
+		$('smtp').textContent = st.smtp;
+		$('dry').textContent = !st.dry ? 'not run' : !st.dry.ok ? 'failed (see its output)' : st.dry.current ? 'OK: ' + st.dry.mails + ' mails' : 'outdated: the patch files changed';
+		$('dry').className = st.dry && st.dry.ok && st.dry.current ? 'ok' : st.dry ? 'warn' : '';
+		$('send').disabled = !(st.dry && st.dry.ok && st.dry.current) || !!st.busy;
 		for (const [id, key] of [['prefix', 'prefix'], ['to', 'to'], ['cc', 'cc']])
 			if (document.activeElement !== $(id)) $(id).value = st[key];
 		for (const el of document.querySelectorAll('[data-opt]')) {
@@ -484,7 +504,8 @@ function html() {
 function registerSeries(context, s) {
 	const series = new Series(context, s);
 	const patches = new Patches(series);
-	const view = new SeriesView(series, patches);
+	const sender = new Sender(patches);
+	const view = new SeriesView(series, patches, sender);
 	context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider('kernelDev.series', view, { webviewOptions: { retainContextWhenHidden: true } }),
 		series.problems.collection,
@@ -494,8 +515,10 @@ function registerSeries(context, s) {
 		vscode.commands.registerCommand('kernelDev.series.pickBase', () => series.pickBase()),
 		vscode.commands.registerCommand('kernelDev.series.editCover', () => patches.editCover()),
 		vscode.commands.registerCommand('kernelDev.series.generate', () => patches.generate()),
+		vscode.commands.registerCommand('kernelDev.series.dryRun', () => sender.dryRun()),
+		vscode.commands.registerCommand('kernelDev.series.send', () => sender.send()),
 	);
-	return { series, patches, view };
+	return { series, patches, sender, view };
 }
 
 module.exports = { Series, SeriesView, registerSeries, html, summary };

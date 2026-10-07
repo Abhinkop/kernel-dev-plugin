@@ -309,6 +309,16 @@
 				"command": "kernelDev.apply.openFiles",
 				"title": "Apply mbox / Patch Files…",
 				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.series.dryRun",
+				"title": "Send Patches: Dry Run (git send-email --dry-run)",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.series.send",
+				"title": "Send Patches… (git send-email)",
+				"category": "Kernel"
 			}
 		],
 		"menus": {
@@ -515,6 +525,14 @@
 				},
 				{
 					"command": "kernelDev.apply.openFiles",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.series.dryRun",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.series.send",
 					"when": "kernelDev.active"
 				}
 			],
