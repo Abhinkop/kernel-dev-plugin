@@ -333,9 +333,9 @@ src/oops.js, dt.js, kunit.js, clangd.js, tools.js, ui.js, tasks.js, git.js, arch
 ### Tests
 
 ```sh
-scripts/test.sh                 # type check, unit tests, integration tests in VS Code, coverage
-scripts/test.sh unit            # unit tests only
-KWB_E2E=1 scripts/test.sh       # also build, boot, crash and debug a real kernel (minutes)
+scripts/test.sh                 # type check, unit, integration and UI tests, coverage
+scripts/test.sh unit            # unit tests only (also: integration, ui)
+KWB_E2E=1 scripts/test.sh       # also build, boot, crash and debug real kernels (about 25 minutes)
 ```
 
 `scripts/test.sh` runs everything in a container (`test/docker/Dockerfile`),
@@ -351,10 +351,22 @@ so no Node.js is needed on the host.
   They drive commands, quick picks, tree views, Problems, inlay hints and
   editor tabs, and use the tree's real checkpatch, get_maintainer.pl, git am,
   git send-email `--dry-run` and git bisect.
-- **End to end** (`KWB_E2E=1`): configures and builds a defconfig kernel,
-  boots it in QEMU with an initramfs, crashes it and checks the decoded trace,
-  checks the debugger hand-off at `start_kernel`, runs W=1 with the build, and
-  runs KUnit.
+- **UI tests** (`test/ui`): `vscode-extension-tester` drives a real VS Code
+  window with WebDriver, as a user would: clicks the Kernel tab's rows
+  (Configure, an option, the architecture picker), right-clicks a row and the
+  editor, checks the editor toolbar buttons, and checks that a step's terminal
+  closes when it succeeds and stays when it fails. Screenshots of failures go
+  to `.vscode-test/extest/screenshots/`.
+- **End to end** (`KWB_E2E=1`):
+  - x86_64: configures and builds a Debug defconfig kernel, boots it in QEMU
+    with an initramfs, crashes it and checks the decoded trace, checks the
+    debugger hand-off at `start_kernel`, runs W=1 with the build and KUnit,
+    and builds a Release kernel with LLVM.
+  - arm64 and riscv64 (`KWB_CROSS`): configure and build with the cross
+    compiler, boot to the root-mount panic and decode it, and hand a guest
+    halted at `start_kernel` to the debugger.
+  - Real debugger: with the C/C++ extension installed in the test VS Code,
+    Debug attaches and the session stops in `start_kernel`.
 
 ### Reports
 
@@ -363,7 +375,7 @@ so no Node.js is needed on the host.
 | `coverage/index.html` | Line, branch and function coverage of the unit and integration tests combined |
 | `test-results/coverage.md` | The same as a table |
 | `test-results/ui-performance.md` | How long each view, action and step took in the integration tests |
-| `test-results/unit.txt`, `integration.txt` | Test output |
+| `test-results/unit.txt`, `integration.txt`, `ui.txt` | Test output |
 
 ### Packaging
 
