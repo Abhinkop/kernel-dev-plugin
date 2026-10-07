@@ -2,9 +2,18 @@
 	"name": "kernel-dev",
 	"displayName": "Kernel Dev: Configure, Build, Run, Debug",
 	"description": "Visual Studio-style kernel development: Configure / Build / Run / Debug in QEMU, plus a Kernel Git tab for patch series (checkpatch, W=1, format-patch, send-email), applying series from lore, blame, file history and bisect. No per-workspace files.",
-	"version": "0.6.2",
-	"publisher": "ajose",
+	"version": "0.7.0",
+	"publisher": "Abhinkop",
 	"license": "MIT",
+	"icon": "media/icon.png",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Abhinkop/kernel-dev-plugin.git"
+	},
+	"bugs": {
+		"url": "https://github.com/Abhinkop/kernel-dev-plugin/issues"
+	},
+	"homepage": "https://github.com/Abhinkop/kernel-dev-plugin#readme",
 	"engines": {
 		"vscode": "^1.85.0"
 	},

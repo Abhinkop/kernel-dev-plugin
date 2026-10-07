@@ -1,0 +1,5 @@
+# Only the extension itself goes into the package.
+.git/**
+.gitignore
+*.vsix
+scripts/package-vsix.sh

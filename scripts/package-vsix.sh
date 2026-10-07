@@ -13,7 +13,7 @@ stage=$(mktemp -d)
 trap 'rm -rf "$stage"' EXIT
 
 mkdir -p "$stage/extension"
-cp -r package.json extension.js src scripts media README.md "$stage/extension/"
+cp -r package.json extension.js src scripts media README.md CHANGELOG.md LICENSE "$stage/extension/"
 rm -f "$stage/extension/scripts/package-vsix.sh"
 
 python3 - "$stage" <<'EOF'
