@@ -44,9 +44,9 @@ class Kbuild {
 		const base = path.resolve(this.root, config);
 		/** @type {Record<string, string>} */
 		const options = {
-			...(s.get('run.mode', 'initramfs') === 'virtme'
+			...(s.get('run.mode', 'qemu') === 'virtme'
 				? s.get('configure.virtmeOptions', {})
-				: s.get('configure.initramfsOptions', {})),
+				: s.get('configure.qemuOptions', {})),
 			...(variant === 'debug' ? s.get('configure.debugOptions', {}) : s.get('configure.releaseOptions', {})),
 			...s.get('configure.options', {}),
 		};

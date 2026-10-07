@@ -2,7 +2,7 @@
 	"name": "kernel-dev",
 	"displayName": "Kernel Dev: Configure, Build, Run, Debug",
 	"description": "Visual Studio-style Configure / Build / Run / Debug for the Linux kernel: a Kernel panel and editor toolbar with arch, Debug/Release and config; QEMU + gdb; clangd set up automatically. No per-workspace files.",
-	"version": "0.4.0",
+	"version": "0.5.0",
 	"publisher": "ajose",
 	"license": "GPL-2.0",
 	"engines": {
@@ -486,7 +486,7 @@
 						},
 						"markdownDescription": "Kconfig options for the **Release** variant."
 					},
-					"kernelDev.configure.initramfsOptions": {
+					"kernelDev.configure.qemuOptions": {
 						"type": "object",
 						"additionalProperties": {
 							"type": "string"
@@ -499,7 +499,7 @@
 							"BINFMT_ELF": "y",
 							"BINFMT_SCRIPT": "y"
 						},
-						"markdownDescription": "Kconfig options needed to boot the busybox initramfs (applied when `kernelDev.run.mode` is `initramfs`)."
+						"markdownDescription": "Kconfig options applied when `kernelDev.run.mode` is `qemu`, so the kernel can boot from an initramfs given in `kernelDev.run.initramfs`."
 					},
 					"kernelDev.configure.virtmeOptions": {
 						"type": "object",
@@ -599,12 +599,12 @@
 					"kernelDev.run.mode": {
 						"type": "string",
 						"enum": [
-							"initramfs",
+							"qemu",
 							"virtme"
 						],
-						"default": "initramfs",
+						"default": "qemu",
 						"markdownEnumDescriptions": [
-							"QEMU with an initramfs packed around your busybox",
+							"QEMU, with the initramfs from `kernelDev.run.initramfs` if one is set",
 							"virtme-ng (`vng`), booting the host root filesystem"
 						],
 						"description": "How Run and Debug boot the kernel."
@@ -623,7 +623,7 @@
 							"type": "string"
 						},
 						"default": {},
-						"description": "Use this initramfs per arch instead of packing one from busybox."
+						"markdownDescription": "Initramfs to boot with, per arch, e.g. `{ \"arm64\": \"/srv/initramfs/arm64.cpio.gz\" }`. If none is set for the arch, the kernel boots without an initramfs (give `root=` in `kernelDev.run.cmdline` and a disk in `kernelDev.run.qemuArgs`)."
 					},
 					"kernelDev.run.memory": {
 						"type": "string",

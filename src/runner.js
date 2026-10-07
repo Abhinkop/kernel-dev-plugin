@@ -7,7 +7,7 @@ const net = require('net');
 const path = require('path');
 const { execFile } = require('child_process');
 const { archInfo, isNative } = require('./arch');
-const { runTask, sq } = require('./tasks');
+const { sq } = require('./tasks');
 
 /** @typedef {import('./settings').Settings} Settings */
 /** @typedef {import('./settings').Configured} Configured */
@@ -130,54 +130,34 @@ class Runner {
 			vscode.window.showErrorMessage(`Kernel: no ${this.s.arch} ${this.s.variant} kernel image. Build first.`);
 			return undefined;
 		}
-		if (this.s.get('run.mode', 'initramfs') === 'initramfs' && !await this.ensureInitramfs(state))
+		if (this.s.get('run.mode', 'qemu') !== 'virtme' && !await this.checkInitramfs(state))
 			return undefined;
 		return state;
 	}
 
-	/** @param {Configured} state */
+	/**
+	 * kernelDev.run.initramfs.<arch>, or undefined to boot without one.
+	 * @param {Configured} state
+	 */
 	initramfsPath(state) {
 		const custom = this.s.get('run.initramfs', /** @type {Record<string,string>} */ ({}))[state.arch];
-		return custom ? path.resolve(this.s.root, custom) : path.join(state.buildDir, 'kernel-dev', 'initramfs.cpio.gz');
+		return custom ? path.resolve(this.s.root, custom) : undefined;
 	}
 
 	/**
-	 * Use kernelDev.run.initramfs.<arch> if set; otherwise pack one around
-	 * kernelDev.run.busybox.<arch> (default for the host arch: busybox on
-	 * PATH). Repacked when the busybox changes.
+	 * A configured initramfs that does not exist is an error, not a reason
+	 * to silently boot without it.
 	 * @param {Configured} state
 	 */
-	async ensureInitramfs(state) {
-		const out = this.initramfsPath(state);
-		const custom = this.s.get('run.initramfs', /** @type {Record<string,string>} */ ({}))[state.arch];
-		if (custom) {
-			if (fs.existsSync(out))
-				return true;
-			vscode.window.showErrorMessage(`Kernel: initramfs ${out} (kernelDev.run.initramfs.${state.arch}) does not exist.`);
-			return false;
-		}
-
-		const configured = this.s.get('run.busybox', /** @type {Record<string,string>} */ ({}))[state.arch];
-		const busybox = configured ? path.resolve(this.s.root, configured) : (isNative(state.arch) ? which('busybox') : undefined);
-		if (!busybox) {
-			const pick = await vscode.window.showErrorMessage(
-				`Kernel: to boot ${state.arch}, set the path to a static ${state.arch} busybox (kernelDev.run.busybox).`, 'Open Setting');
-			if (pick)
-				await vscode.commands.executeCommand('workbench.action.openSettings', 'kernelDev.run.busybox');
-			return false;
-		}
-
-		const stamp = `${out}.source`;
-		const upToDate = fs.existsSync(out) && readOr(stamp) === busybox &&
-			fs.statSync(out).mtimeMs >= fs.statSync(busybox).mtimeMs;
-		if (upToDate)
+	async checkInitramfs(state) {
+		const file = this.initramfsPath(state);
+		if (!file || fs.existsSync(file))
 			return true;
-		const script = path.join(this.context.extensionPath, 'scripts', 'mkinitramfs.sh');
-		const code = await runTask(this.s.folder, `Initramfs ${state.arch}`, 'bash',
-			[script, state.arch, busybox, out, this.s.root, state.buildDir]);
-		if (code === 0)
-			fs.writeFileSync(stamp, busybox);
-		return code === 0;
+		const pick = await vscode.window.showErrorMessage(
+			`Kernel: initramfs ${file} (kernelDev.run.initramfs.${state.arch}) does not exist.`, 'Open Setting');
+		if (pick)
+			await vscode.commands.executeCommand('workbench.action.openSettings', 'kernelDev.run.initramfs');
+		return false;
 	}
 
 	/** @param {string} arch */
@@ -210,7 +190,7 @@ class Runner {
 		const gdbArgs = debug ? ['-gdb', `tcp:localhost:${port}`, '-S'] : [];
 		const cmdline = [debug ? 'nokaslr' : '', extraCmdline].filter(Boolean).join(' ');
 
-		if (this.s.get('run.mode', 'initramfs') === 'virtme') {
+		if (this.s.get('run.mode', 'qemu') === 'virtme') {
 			const args = ['--run', this.kbuild.image(state), '--arch', info.vngArch, '--memory', memory, '--cpus', smp];
 			if (cmdline)
 				args.push('--append', cmdline);
@@ -220,6 +200,7 @@ class Runner {
 			return { cmd: 'vng', args: args.concat(this.s.get('run.virtmeArgs', /** @type {string[]} */ ([]))) };
 		}
 
+		const initramfs = this.initramfsPath(state);
 		return {
 			cmd: info.qemu,
 			args: [
@@ -227,8 +208,8 @@ class Runner {
 				'-smp', smp,
 				'-m', memory,
 				'-kernel', this.kbuild.image(state),
-				'-initrd', this.initramfsPath(state),
-				'-append', [`console=${info.console}`, 'rdinit=/init', cmdline].filter(Boolean).join(' '),
+				...(initramfs ? ['-initrd', initramfs] : []),
+				'-append', [`console=${info.console}`, cmdline].filter(Boolean).join(' '),
 				'-nographic',
 				'-no-reboot',
 				...qemuArgs,
@@ -324,27 +305,6 @@ class Runner {
 				[SESSION_MARKER]: true,
 			};
 		}
-	}
-}
-
-/** @param {string} bin */
-function which(bin) {
-	for (const dir of (process.env.PATH || '').split(path.delimiter)) {
-		const p = path.join(dir, bin);
-		try {
-			fs.accessSync(p, fs.constants.X_OK);
-			return fs.realpathSync(p);
-		} catch {}
-	}
-	return undefined;
-}
-
-/** @param {string} file */
-function readOr(file) {
-	try {
-		return fs.readFileSync(file, 'utf8');
-	} catch {
-		return '';
 	}
 }
 
