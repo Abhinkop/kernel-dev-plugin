@@ -194,15 +194,23 @@ describe('tasks', () => {
 		assert.strictEqual(await runTask(folder, 'fail', 'sh', ['-c', 'exit 3']), 3);
 	});
 
-	it('keeps the terminal open or closes it, as set', () => {
+	it('closes the terminal of a step that succeeded, and keeps a failed one', async () => {
 		const folder = { uri: mock.vscode.Uri.file(os.tmpdir()) };
-		let t = makeTask(folder, 'x', 'true', []);
-		assert.strictEqual(t.presentationOptions.close, false);
-		assert.strictEqual(t.presentationOptions.showReuseMessage, true);
-		mock.state.config['kernelDev.terminal.afterTask'] = 'close';
-		t = makeTask(folder, 'x', 'true', []);
-		assert.strictEqual(t.presentationOptions.close, true);
+		const t = makeTask(folder, 'x', 'true', []);
+		assert.strictEqual(t.presentationOptions.close, false, 'VS Code would close it even on failure');
 		assert.strictEqual(t.source, 'kernel');
+		const open = () => mock.vscode.window.terminals.map(x => x.name);
+		await runTask(folder, 'good', 'sh', ['-c', 'exit 0']);
+		await runTask(folder, 'bad', 'sh', ['-c', 'exit 2']);
+		assert.deepStrictEqual(open(), ['bad']);
+		mock.state.config['kernelDev.terminal.afterTask'] = 'keep';
+		await runTask(folder, 'kept', 'sh', ['-c', 'exit 0']);
+		assert.deepStrictEqual(open(), ['bad', 'kept']);
+		for (const legacy of ['waitForKey', 'close']) {
+			mock.state.config['kernelDev.terminal.afterTask'] = legacy;
+			await runTask(folder, legacy, 'sh', ['-c', 'exit 0']);
+			assert.ok(!open().includes(legacy), `${legacy} closes on success`);
+		}
 	});
 });
 

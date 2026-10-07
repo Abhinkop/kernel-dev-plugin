@@ -223,9 +223,10 @@ const vscode = {
 			return editor;
 		},
 		withProgress: async (o, f) => f({ report() {} }, new CancellationTokenSource().token),
+		get terminals() { return state.terminals.filter(t => !t.disposed); },
 		createTerminal: (o) => {
-			const t = { name: o.name, options: o, exitStatus: undefined, shown: false, sent: [],
-				show() { this.shown = true; }, sendText(s) { this.sent.push(s); }, dispose() { onDidCloseTerminal.fire(this); } };
+			const t = { name: o.name, options: o, exitStatus: undefined, shown: false, sent: [], disposed: false,
+				show() { this.shown = true; }, sendText(s) { this.sent.push(s); }, dispose() { this.disposed = true; onDidCloseTerminal.fire(this); } };
 			state.terminals.push(t);
 			onDidOpenTerminal.fire(t);
 			return t;
@@ -285,6 +286,9 @@ const vscode = {
 		executeTask: async (task) => {
 			const execution = { task };
 			state.tasks.push(task);
+			// Like VS Code, a dedicated terminal named after the task, reused.
+			if (!vscode.window.terminals.some(t => t.name === task.name))
+				vscode.window.createTerminal({ name: task.name });
 			setImmediate(() => {
 				onDidStartTaskProcess.fire({ execution, processId: 1 });
 				const finish = (code) => {

@@ -272,7 +272,7 @@ The **…** menu also has Check Working Changes and Format Changed Lines
 | `kernelDev.configure.debugOptions` / `releaseOptions` | DWARF + `GDB_SCRIPTS` / `DEBUG_INFO_NONE` | |
 | `kernelDev.make.args` / `jobs` / `ccache` | `[]` / all CPUs / `false` | |
 | `kernelDev.buildDirectory` | `build/${arch}/${variant}` | |
-| `kernelDev.terminal.afterTask` | `waitForKey` | or `close` |
+| `kernelDev.terminal.afterTask` | `closeOnSuccess` | or `keep`; a failed step's terminal always stays |
 | `kernelDev.run.initramfs` | `{}` | per arch |
 | `kernelDev.run.shareBuildDir` | `false` | 9p share for `insmod` |
 | `kernelDev.run.memory` / `smp` / `kvm` / `cmdline` / `qemuArgs` | `2G` / `2` / `auto` / `""` / `[]` | |

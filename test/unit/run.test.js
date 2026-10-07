@@ -97,12 +97,35 @@ describe('runner', () => {
 		r.onBoot = (log) => { booted = log; };
 		r.boot(st, false);
 		assert.strictEqual(mock.state.terminals.length, 1);
-		assert.strictEqual(mock.state.terminals[0].options.shellPath, 'qemu-system-x86_64');
+		const o = mock.state.terminals[0].options;
+		assert.strictEqual(o.shellPath, 'bash');
+		assert.strictEqual(o.shellArgs[3], 'qemu-system-x86_64', 'QEMU runs under the exit-code wrapper');
 		assert.ok(r.running);
 		assert.strictEqual(booted, path.join(st.buildDir, 'kernel-dev', 'console.log'));
 		assert.ok(fs.existsSync(booted));
 		r.stop();
 		assert.ok(!r.running);
+	});
+
+	it('keeps a failed QEMU\'s terminal open, but not as a running VM', async () => {
+		const { s, ctx } = settings();
+		const r = new Runner(ctx, s, new Kbuild(s));
+		const st = state('x86_64');
+		r.vmCommand = () => ({ cmd: 'sh', args: ['-c', 'echo "qemu: could not open kernel" >&2; exit 1'] });
+		let changed = 0;
+		r.onDidChange(() => changed++);
+		r.boot(st, false);
+		const o = mock.state.terminals[0].options;
+		// Run the wrapper as the terminal would, with no key to press.
+		const { spawnSync } = require('child_process');
+		const p = spawnSync(o.shellPath, o.shellArgs, { encoding: 'utf8', input: 'x' });
+		assert.strictEqual(p.status, 1);
+		assert.match(p.stdout, /sh exited with 1\. Press a key to close\./);
+		assert.strictEqual(fs.readFileSync(path.join(st.buildDir, 'kernel-dev', 'vm.exit'), 'utf8').trim(), '1');
+		assert.ok(!r.running, 'the terminal stays, the VM is not running');
+		await new Promise(res => setTimeout(res, 200));
+		assert.ok(changed >= 2, 'boot and exit are announced');
+		r.stop();
 	});
 
 	it('runs after building, and refuses without a kernel image', async () => {

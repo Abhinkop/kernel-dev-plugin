@@ -1691,15 +1691,15 @@
 					"kernelDev.terminal.afterTask": {
 						"type": "string",
 						"enum": [
-							"waitForKey",
-							"close"
+							"closeOnSuccess",
+							"keep"
 						],
-						"default": "waitForKey",
+						"default": "closeOnSuccess",
 						"enumDescriptions": [
-							"Keep the terminal open until you press a key",
-							"Close the terminal as soon as the step finishes (errors stay in the Problems panel)"
+							"Close the terminal when the step succeeds; keep it open when it fails, to read the errors",
+							"Keep the terminal open after every step"
 						],
-						"description": "What happens to the terminal of Configure / Build / Clean / Full clean when it finishes.",
+						"description": "What happens to the terminal of a step (Configure, Build, Clean, checks, ...) when it finishes. A failed step's terminal always stays open.",
 						"scope": "resource"
 					}
 				}

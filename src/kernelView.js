@@ -30,7 +30,7 @@ const OPTIONS = [
 	{ key: 'configure.fragments', label: 'Config fragments', kind: 'words', placeholder: 'kernel/configs/debug.config' },
 	{ key: 'configure.options', label: 'Config options', kind: 'options', placeholder: 'KASAN=y LOG_BUF_SHIFT=18' },
 	{ key: 'terminal.afterTask', label: 'When a step finishes', kind: 'enum',
-		choices: [{ value: 'waitForKey', label: 'Keep the terminal open' }, { value: 'close', label: 'Close the terminal' }] },
+		choices: [{ value: 'closeOnSuccess', label: 'Close the terminal if it succeeded' }, { value: 'keep', label: 'Keep the terminal open' }] },
 	{ key: 'run.mode', label: 'Boot with', kind: 'enum', choices: [{ value: 'qemu', label: 'QEMU' }, { value: 'virtme', label: 'virtme-ng' }] },
 	{ key: 'run.initramfs', label: 'Initramfs', kind: 'archFile' },
 	{ key: 'run.shareBuildDir', label: 'Share build directory with the guest', kind: 'bool' },
@@ -98,6 +98,7 @@ class KernelView {
 		this.onDidChangeTreeData = this._onDidChangeTreeData.event;
 		const refresh = () => this.refresh();
 		s.onDidChange(refresh);
+		runner.onDidChange(refresh);
 		context.subscriptions.push(
 			this._onDidChangeTreeData,
 			vscode.window.onDidOpenTerminal(refresh),
@@ -241,7 +242,7 @@ class KernelView {
 		const s = this.s;
 		const v = s.get(o.key, /** @type {any} */ (undefined));
 		switch (o.kind) {
-		case 'enum': return o.choices?.find(c => c.value === v)?.label || String(v ?? '');
+		case 'enum': return (o.choices?.find(c => c.value === v) || (o.key === 'terminal.afterTask' ? o.choices?.[0] : undefined))?.label || String(v ?? '');
 		case 'bool': return v ? 'on' : 'off';
 		case 'args': return joinArgs(v || []) || 'none';
 		case 'words': return (v || []).join(' ') || 'none';

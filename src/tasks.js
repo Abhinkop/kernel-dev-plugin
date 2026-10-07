@@ -6,8 +6,29 @@ const vscode = require('vscode');
 const TASK_TYPE = 'kernel';
 
 /**
+ * Whether a step's terminal stays after it succeeds. A failed step's
+ * terminal always stays, so its errors can be read. "waitForKey" and
+ * "close" are the values of earlier versions.
+ * @param {vscode.WorkspaceFolder} folder
+ */
+function keepTerminal(folder) {
+	return vscode.workspace.getConfiguration('kernelDev', folder.uri).get('terminal.afterTask') === 'keep';
+}
+
+/**
+ * The terminal a task ran in: VS Code names it after the task, with a
+ * "Task - " prefix in some versions.
+ * @param {string} name
+ */
+function taskTerminal(name) {
+	return vscode.window.terminals.find(t => t.name === name || t.name === `Task - ${name}`);
+}
+
+/**
  * Run a command as a VS Code task (output in the terminal panel, problem
- * matcher applied) and resolve with its exit code.
+ * matcher applied) and resolve with its exit code. The terminal closes
+ * when the step succeeds, unless kernelDev.terminal.afterTask is "keep";
+ * it stays when the step fails.
  *
  * @param {vscode.WorkspaceFolder} folder
  * @param {string} name
@@ -23,7 +44,10 @@ async function runTask(folder, name, command, args, opts = {}) {
 		const sub = vscode.tasks.onDidEndTaskProcess(e => {
 			if (e.execution === execution) {
 				sub.dispose();
-				resolve(e.exitCode ?? 1);
+				const code = e.exitCode ?? 1;
+				if (code === 0 && !keepTerminal(folder))
+					taskTerminal(name)?.dispose();
+				resolve(code);
 			}
 		});
 	});
@@ -45,14 +69,13 @@ function makeTask(folder, name, command, args, opts = {}) {
 		new vscode.ProcessExecution(command, args, { cwd: opts.cwd || folder.uri.fsPath, env: opts.env }),
 		opts.problemMatcher || [],
 	);
-	const close = vscode.workspace.getConfiguration('kernelDev', folder.uri).get('terminal.afterTask') === 'close';
 	task.presentationOptions = {
 		reveal: opts.reveal ?? vscode.TaskRevealKind.Always,
 		panel: vscode.TaskPanelKind.Dedicated,
 		clear: true,
-		// waitForKey: the terminal stays with "press any key to close it".
-		showReuseMessage: !close,
-		close,
+		showReuseMessage: false,
+		// runTask() closes the terminal of a step that succeeded.
+		close: false,
 	};
 	return task;
 }
@@ -65,4 +88,4 @@ function sq(s) {
 	return /^[\w@%+=:,./-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`;
 }
 
-module.exports = { runTask, makeTask, sq, TASK_TYPE };
+module.exports = { runTask, makeTask, sq, keepTerminal, taskTerminal, TASK_TYPE };

@@ -195,7 +195,8 @@ class Kbuild {
 			name: `${tool} ${state.arch} ${state.variant}`,
 			cwd: this.root,
 			shellPath: 'bash',
-			shellArgs: ['-c', `${this.make(state.makeArgs, tool)}; echo; read -n1 -p "Press a key to close."`],
+			// A clean exit closes the terminal; a failure stays to be read.
+			shellArgs: ['-c', `${this.make(state.makeArgs, tool)} || { echo; read -n1 -p "${tool} failed. Press a key to close."; exit 1; }`],
 		});
 		term.show();
 	}

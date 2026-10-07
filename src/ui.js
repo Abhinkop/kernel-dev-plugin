@@ -23,6 +23,7 @@ function syncContextKeys(context, s, runner) {
 		vscode.commands.executeCommand('setContext', 'kernelDev.vmRunning', runner.running);
 	};
 	s.onDidChange(update);
+	runner.onDidChange(update);
 	context.subscriptions.push(
 		vscode.window.onDidOpenTerminal(update),
 		vscode.window.onDidCloseTerminal(update),

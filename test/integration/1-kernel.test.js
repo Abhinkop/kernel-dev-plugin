@@ -82,6 +82,45 @@ describe('Kernel Workbench in VS Code', function () {
 		});
 	});
 
+	describe('terminals', () => {
+		const names = () => vscode.window.terminals.map(t => t.name);
+
+		it('closes a step\'s terminal when it succeeds and keeps it when it fails', async () => {
+			const { runTask } = require(require('path').join(vscode.extensions.getExtension(ID).extensionPath, 'src', 'tasks.js'));
+			const folder = vscode.workspace.workspaceFolders[0];
+			await time('Terminals', 'step that succeeds: run, close its terminal', async () => {
+				assert.strictEqual(await runTask(folder, 'KWB ok step', 'sh', ['-c', 'echo fine']), 0);
+				await until(() => !names().some(n => n.includes('KWB ok step')), 5000);
+			});
+			assert.strictEqual(await runTask(folder, 'KWB failing step', 'sh', ['-c', 'echo broken >&2; exit 2']), 2);
+			await sleep(500);
+			assert.ok(names().some(n => n.includes('KWB failing step')), `kept: ${names().join(', ')}`);
+			vscode.window.terminals.find(t => t.name.includes('KWB failing step'))?.dispose();
+		});
+
+		it('closes the VM terminal when QEMU exits cleanly, and keeps it when it fails', async () => {
+			const r = x.runner;
+			const orig = r.vmCommand;
+			const st = { arch: 'x86_64', variant: 'debug', buildDir: require('fs').mkdtempSync(require('path').join(require('os').tmpdir(), 'kwb-vm-')) };
+			try {
+				r.vmCommand = () => ({ cmd: 'sh', args: ['-c', 'exit 0'] });
+				r.boot(st, false);
+				const ok = r.vm;
+				await until(() => !vscode.window.terminals.includes(ok), 10000);
+				r.vmCommand = () => ({ cmd: 'sh', args: ['-c', 'echo qemu: could not open kernel >&2; exit 1'] });
+				r.boot(st, false);
+				const bad = r.vm;
+				await until(() => !r.running, 10000);
+				await sleep(500);
+				assert.ok(vscode.window.terminals.includes(bad), 'a failed QEMU leaves its terminal to read');
+				assert.strictEqual(bad.exitStatus, undefined);
+			} finally {
+				r.vmCommand = orig;
+				r.stop();
+			}
+		});
+	});
+
 	describe('editor', () => {
 		it('opens kernel source files and offers the Kernel Workbench menu', async () => {
 			const doc = await time('Editor', 'open kernel/sched/core.c', async () => vscode.window.showTextDocument(file('kernel/sched/core.c')));

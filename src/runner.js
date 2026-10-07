@@ -27,12 +27,23 @@ class Runner {
 		this.kbuild = kbuild;
 		/** @type {vscode.Terminal | undefined} */
 		this.vm = undefined;
+		/** @type {string | undefined} where the VM's wrapper writes QEMU's exit code */
+		this.exitFile = undefined;
+		/** @type {fs.FSWatcher | undefined} */
+		this.exitWatch = undefined;
+		this._onDidChange = new vscode.EventEmitter();
+		/** Fires when the VM starts or stops. */
+		this.onDidChange = this._onDidChange.event;
 		/** @type {((consoleLog: string, state: Configured) => void) | undefined} called when a QEMU VM boots */
 		this.onBoot = undefined;
 		context.subscriptions.push(
+			this._onDidChange,
+			{ dispose: () => this.exitWatch?.close() },
 			vscode.window.onDidCloseTerminal(t => {
-				if (t === this.vm)
+				if (t === this.vm) {
 					this.vm = undefined;
+					this._onDidChange.fire(undefined);
+				}
 			}),
 			vscode.debug.onDidTerminateDebugSession(session => {
 				if (session.configuration[SESSION_MARKER] && this.s.get('debug.stopVmWhenDebuggingEnds', true))
@@ -41,13 +52,16 @@ class Runner {
 		);
 	}
 
+	/** The VM's terminal is open and QEMU has not exited (a failed QEMU's terminal stays open to be read). */
 	get running() {
-		return !!this.vm && this.vm.exitStatus === undefined;
+		return !!this.vm && this.vm.exitStatus === undefined && !(this.exitFile && fs.existsSync(this.exitFile));
 	}
 
 	stop() {
 		const vm = this.vm;
 		this.vm = undefined;
+		this.exitWatch?.close();
+		this.exitWatch = undefined;
 		vm?.dispose();
 	}
 
@@ -236,17 +250,33 @@ class Runner {
 	boot(state, debug) {
 		this.stop();
 		const { cmd, args } = this.vmCommand(state, debug);
+		// VS Code closes a terminal when its process exits, which would take
+		// QEMU's error with it: a wrapper records the exit code and, on a
+		// failure, keeps the terminal until a key is pressed. A clean exit
+		// (poweroff, Ctrl-A X) closes it.
+		const dir = path.join(state.buildDir, 'kernel-dev');
+		fs.mkdirSync(dir, { recursive: true });
+		this.exitFile = path.join(dir, 'vm.exit');
+		fs.rmSync(this.exitFile, { force: true });
+		this.exitWatch = fs.watch(dir, (_, f) => {
+			if (f === 'vm.exit')
+				this._onDidChange.fire(undefined);
+		});
+		this.exitWatch.unref(); // never what keeps the extension host alive
+		const wrapper = `"$@"; rc=$?; echo $rc > ${sq(this.exitFile)}; ` +
+			`if [ $rc -ne 0 ]; then printf '\\n%s exited with %d. Press a key to close.' "$1" $rc; read -rn1; fi; exit $rc`;
 		this.vm = vscode.window.createTerminal({
 			name: `${debug ? 'Debug' : 'Run'} ${state.arch} ${state.variant}`,
 			cwd: this.s.root,
-			shellPath: cmd,
-			shellArgs: args,
+			shellPath: 'bash',
+			shellArgs: ['-c', wrapper, 'kernel-vm', cmd, ...args],
 			message: `\x1b[2m$ ${[cmd, ...args].map(sq).join(' ')}\r\n(Ctrl-A X quits QEMU)\x1b[0m\r\n` +
 				(this.s.get('run.shareBuildDir', false) && this.s.get('run.mode', 'qemu') !== 'virtme'
 					? `\x1b[2mBuild directory shared; in the guest: mkdir -p /mnt/kbuild && mount -t 9p -o trans=virtio,version=9p2000.L kbuild /mnt/kbuild\r\nthen e.g. insmod /mnt/kbuild/drivers/.../foo.ko\x1b[0m\r\n` : ''),
 			iconPath: new vscode.ThemeIcon(debug ? 'debug-alt' : 'vm-running'),
 		});
 		this.vm.show();
+		this._onDidChange.fire(undefined);
 		if (this.s.get('run.mode', 'qemu') !== 'virtme') {
 			const log = this.consoleLog(state);
 			fs.mkdirSync(path.dirname(log), { recursive: true });
