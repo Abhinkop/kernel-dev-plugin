@@ -117,6 +117,16 @@
 				"icon": "$(debug-stop)"
 			},
 			{
+				"command": "kernelDev.checkTools",
+				"title": "Check Required Tools",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.installTools",
+				"title": "Install Missing Tools (apt)",
+				"category": "Kernel"
+			},
+			{
 				"command": "kernelDev.openSettings",
 				"title": "Open Settings",
 				"category": "Kernel",
@@ -247,6 +257,14 @@
 				{
 					"command": "kernelDev.followSelection",
 					"when": "false"
+				},
+				{
+					"command": "kernelDev.checkTools",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.installTools",
+					"when": "kernelDev.active"
 				}
 			],
 			"editor/context": [

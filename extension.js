@@ -11,6 +11,7 @@ const { followSelection } = require('./src/clangd');
 const { syncContextKeys, pickArch, pickVariant, pickConfig } = require('./src/ui');
 const { KernelPanel } = require('./src/panel');
 const { ARCHES } = require('./src/arch');
+const tools = require('./src/tools');
 
 /** @param {vscode.ExtensionContext} context */
 function activate(context) {
@@ -27,6 +28,50 @@ function activate(context) {
 	const panel = new KernelPanel(context, s, kbuild, runner);
 	context.subscriptions.push(vscode.window.registerWebviewViewProvider('kernelDev.panel',
 		panel, { webviewOptions: { retainContextWhenHidden: true } }));
+
+	// Check the host for everything the current selection needs: when the
+	// extension loads and whenever arch / toolchain / run mode change. The
+	// error is shown once per distinct set of missing tools.
+	let lastShown = '';
+	/** @param {boolean} [always] show the result even if unchanged / all present */
+	const checkTools = async always => {
+		const missing = tools.missing(s);
+		const text = tools.describe(missing);
+		const cmd = tools.installCommand(missing);
+		panel.setTools(text, cmd);
+		if (!missing.length) {
+			lastShown = '';
+			if (always)
+				vscode.window.showInformationMessage(`Kernel: all tools for ${s.arch} are installed.`);
+			return;
+		}
+		if (!always && text === lastShown)
+			return;
+		lastShown = text;
+		const buttons = cmd ? ['Run Install Command', 'Copy Command'] : [];
+		if (missing.some(r => r.what.includes('busybox') && !r.pkg))
+			buttons.push('Set Busybox Path');
+		const pick = await vscode.window.showErrorMessage(
+			`Kernel: missing tools for ${s.arch}, ${describe(s)}: ${text}.` + (cmd ? ` Install with: ${cmd}` : ''), ...buttons);
+		if (pick === 'Run Install Command')
+			runInstall(cmd);
+		else if (pick === 'Copy Command')
+			await vscode.env.clipboard.writeText(cmd);
+		else if (pick === 'Set Busybox Path')
+			await vscode.commands.executeCommand('workbench.view.extension.kernelDev');
+	};
+	/** @param {string} cmd */
+	const runInstall = cmd => {
+		const term = vscode.window.createTerminal({ name: 'Install kernel tools', cwd: s.root });
+		term.show();
+		term.sendText(cmd);
+	};
+	let pending = /** @type {NodeJS.Timeout | undefined} */ (undefined);
+	s.onDidChange(() => {
+		clearTimeout(pending);
+		pending = setTimeout(() => checkTools(false), 500);
+	});
+	checkTools(false);
 
 	/** @param {'.o'|'.i'|'.s'} kind */
 	const compileCurrent = kind => () => {
@@ -62,10 +107,21 @@ function activate(context) {
 		['kernelDev.run', () => runner.run()],
 		['kernelDev.debug', () => runner.debug()],
 		['kernelDev.stop', () => runner.stop()],
+		['kernelDev.checkTools', () => checkTools(true)],
+		['kernelDev.installTools', () => {
+			const cmd = tools.installCommand(tools.missing(s));
+			if (cmd)
+				runInstall(cmd);
+		}],
 		['kernelDev.openSettings', () => vscode.commands.executeCommand('workbench.action.openSettings', 'kernelDev')],
 	];
 	for (const [id, fn] of commands)
 		context.subscriptions.push(vscode.commands.registerCommand(id, fn));
+}
+
+/** "gcc" / "llvm", "initramfs" / "virtme" @param {import('./src/settings').Settings} s */
+function describe(s) {
+	return `${s.get('toolchain', 'gcc')}, ${s.get('run.mode', 'initramfs')}`;
 }
 
 function deactivate() {}

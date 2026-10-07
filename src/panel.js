@@ -38,6 +38,7 @@ class KernelPanel {
 		 * @type {Set<vscode.TaskExecution>}
 		 */
 		this.running = new Set();
+		this.tools = { missing: '', cmd: '' };
 		const push = () => this.push();
 		s.onDidChange(push);
 		context.subscriptions.push(
@@ -142,6 +143,12 @@ class KernelPanel {
 		}
 	}
 
+	/** @param {string} missing @param {string} cmd */
+	setTools(missing, cmd) {
+		this.tools = { missing, cmd };
+		this.push();
+	}
+
 	push() {
 		if (!this.view || !this.view.visible)
 			return;
@@ -168,6 +175,7 @@ class KernelPanel {
 			built: state ? mtime(this.kbuild.image(state)) : '',
 			vm: this.runner.running,
 			busy: busy ? busy.task.name : '',
+			tools: this.tools,
 			options: {
 				'toolchain': s.get('toolchain', 'gcc'),
 				'terminal.afterTask': s.get('terminal.afterTask', 'waitForKey'),
@@ -231,6 +239,7 @@ function html(nonce) {
 	.status dt { color: var(--vscode-descriptionForeground); } .status dd { margin: 0; overflow-wrap: anywhere; }
 	.hint { color: var(--vscode-descriptionForeground); font-size: 11px; margin-top: 3px; }
 	.busy { color: var(--vscode-charts-yellow, var(--vscode-foreground)); }
+	.missing { color: var(--vscode-errorForeground); }
 	a { color: var(--vscode-textLink-foreground); cursor: pointer; }
 </style></head>
 <body>
@@ -262,7 +271,12 @@ function html(nonce) {
 		<dt>Built</dt><dd id="built"></dd>
 		<dt>VM</dt><dd id="vm"></dd>
 		<dt>Build dir</dt><dd id="buildDir"></dd>
+		<dt>Tools</dt><dd id="tools"></dd>
 	</dl>
+	<div class="tools" id="toolsActions">
+		<button class="secondary" data-cmd="kernelDev.installTools" id="installTools">Install missing tools</button>
+		<button class="secondary" data-cmd="kernelDev.checkTools">Check again</button>
+	</div>
 
 	<h3>Configure &amp; build options</h3>
 	<label for="toolchain">Toolchain</label>
@@ -320,6 +334,10 @@ function html(nonce) {
 		$('built').textContent = st.built || 'not yet';
 		$('vm').textContent = st.vm ? 'running' : 'stopped';
 		$('buildDir').textContent = st.buildDir;
+		$('tools').textContent = st.tools.missing ? 'missing ' + st.tools.missing : 'all installed';
+		$('tools').className = st.tools.missing ? 'missing' : '';
+		$('installTools').style.display = st.tools.cmd ? '' : 'none';
+		$('toolsActions').style.display = st.tools.missing ? '' : 'none';
 		$('stop').disabled = !st.vm;
 		document.querySelectorAll('.steps button').forEach(b => b.disabled = !!st.busy);
 		$('task').textContent = st.busy ? st.busy + '…' : 'idle';
