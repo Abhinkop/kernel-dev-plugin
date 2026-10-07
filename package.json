@@ -289,6 +289,16 @@
 				"command": "kernelDev.series.pickBase",
 				"title": "Pick Series Base…",
 				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.series.editCover",
+				"title": "Edit Cover Letter",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.series.generate",
+				"title": "Generate Patches (git format-patch)",
+				"category": "Kernel"
 			}
 		],
 		"menus": {
@@ -479,6 +489,14 @@
 				},
 				{
 					"command": "kernelDev.series.pickBase",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.series.editCover",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.series.generate",
 					"when": "kernelDev.active"
 				}
 			],
@@ -1102,6 +1120,11 @@
 						"type": "boolean",
 						"default": false,
 						"markdownDescription": "Also run `make coccicheck MODE=report` on the touched directories in Check series. Needs `coccinelle` and `ocaml-nox`."
+					},
+					"kernelDev.patches.outputDirectory": {
+						"type": "string",
+						"default": "patches/${branch}/v${version}",
+						"markdownDescription": "Where Generate patches writes the series, relative to the kernel tree or absolute. `${branch}` and `${version}` are substituted."
 					}
 				}
 			}

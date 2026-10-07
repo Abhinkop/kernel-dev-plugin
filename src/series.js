@@ -10,6 +10,7 @@ const { openCommit } = require('./commits');
 const checkpatch = require('./checkpatch');
 const { runTask, sq } = require('./tasks');
 const { page } = require('./webview');
+const { Patches } = require('./patches');
 
 /** @typedef {import('./git').Commit} Commit */
 /** @typedef {import('./checkpatch').Report} Report */
@@ -285,9 +286,10 @@ function summary(r) {
  * @implements {vscode.WebviewViewProvider}
  */
 class SeriesView {
-	/** @param {Series} series */
-	constructor(series) {
+	/** @param {Series} series @param {Patches} patches */
+	constructor(series, patches) {
 		this.series = series;
+		this.patches = patches;
 		/** @type {vscode.WebviewView | undefined} */
 		this.view = undefined;
 		series.onDidChange(() => this.push());
@@ -308,6 +310,11 @@ class SeriesView {
 		const se = this.series;
 		if (m.type === 'ready')
 			return this.push();
+		if (m.type === 'series-option') {
+			const value = m.key === 'prefix' ? String(m.value).trim() || 'PATCH'
+				: String(m.value).split('\n').map(a => a.trim()).filter(Boolean);
+			return this.patches.set(m.key, value);
+		}
 		if (m.type === 'option') {
 			const cfg = vscode.workspace.getConfiguration('kernelDev');
 			const value = m.key === 'checkpatch.ignore' ? String(m.value).split(/[\s,]+/).filter(Boolean) : m.value;
@@ -325,14 +332,21 @@ class SeriesView {
 		case 'format': return se.formatChanged();
 		case 'openCommit': return openCommit(se.root, m.arg);
 		case 'report': return se.showReport(m.arg);
+		case 'editCover': return this.patches.editCover();
+		case 'fillRecipients': return se.withBusy('get_maintainer.pl', () => this.patches.fillRecipients());
+		case 'generate': return this.patches.generate();
+		case 'openPatch': return this.patches.output && vscode.window.showTextDocument(vscode.Uri.file(path.join(this.patches.output.dir, m.arg)), { preview: true });
+		case 'revealOutput': return this.patches.output && vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(path.join(this.patches.output.dir, this.patches.output.files[0])));
 		default: return vscode.commands.executeCommand(m.command);
 		}
 	}
 
-	push() {
+	async push() {
 		if (!this.view?.visible)
 			return;
 		const se = this.series;
+		const pa = this.patches;
+		const cover = await pa.cover();
 		const cfg = vscode.workspace.getConfiguration('kernelDev');
 		this.view.webview.postMessage({
 			type: 'state',
@@ -352,6 +366,13 @@ class SeriesView {
 					notes: r ? r.findings.filter(f => !f.file).map(f => `${f.level}: ${f.message}`) : [],
 				};
 			}),
+			prefix: pa.prefix,
+			to: pa.to.join('\n'),
+			cc: pa.cc.join('\n'),
+			coverSubject: cover ? cover.split('\n')[0] : '',
+			multi: se.info.commits.length > 1,
+			outputDir: path.relative(se.root, pa.outputDir()),
+			output: pa.output ? { dir: path.relative(se.root, pa.output.dir), files: pa.output.files } : undefined,
 			options: {
 				'checkpatch.strict': cfg.get('checkpatch.strict', false),
 				'checkpatch.ignore': /** @type {string[]} */ (cfg.get('checkpatch.ignore', [])).join(' '),
@@ -392,7 +413,30 @@ function html() {
 	<label class="check"><input type="checkbox" id="cocci" data-opt="check.coccinelle"> Coccinelle (coccicheck)</label>
 	<div class="tools"><button class="secondary" data-cmd="format" title="git clang-format against the base: only changed lines">Format changed lines</button></div>
 	<p class="hint">Findings are in the Problems panel. W=1 uses the build configured in the Kernel tab.</p>
+
+	<h3>Patches</h3>
+	<label for="prefix">Subject prefix</label>
+	<input id="prefix" data-sopt="prefix" placeholder="PATCH, PATCH net-next, RFC PATCH">
+	<div id="coverRow">
+		<label>Cover letter</label>
+		<div class="row"><span id="coverSubject" class="grow"></span><button class="secondary fit" data-cmd="editCover">Edit…</button></div>
+	</div>
+	<label for="to">To</label>
+	<textarea id="to" data-sopt="to" placeholder="one address per line"></textarea>
+	<label for="cc">Cc</label>
+	<textarea id="cc" data-sopt="cc" placeholder="one address per line"></textarea>
+	<div class="tools"><button class="secondary" data-cmd="fillRecipients" title="scripts/get_maintainer.pl: maintainers and reviewers to To, lists to Cc">Fill from get_maintainer.pl</button></div>
+	<div class="steps" style="grid-template-columns: 1fr">
+		<button data-cmd="generate" id="generate">Generate patches</button>
+	</div>
+	<p class="hint">Into <span id="outputDir" class="mono"></span>. Blocked while checkpatch reports errors, unless you choose to generate anyway.</p>
+	<div id="outputBox">
+		<label>Generated <a data-cmd="revealOutput">(open folder)</a></label>
+		<ul id="output" class="list"></ul>
+	</div>
 `, `
+	document.querySelectorAll('[data-sopt]').forEach(el => el.addEventListener('change', () =>
+		vscode.postMessage({ type: 'series-option', key: el.dataset.sopt, value: el.value })));
 	document.querySelectorAll('[data-opt]').forEach(el => el.addEventListener('change', () =>
 		vscode.postMessage({ type: 'option', key: el.dataset.opt, value: el.type === 'checkbox' ? el.checked : el.value })));
 	window.addEventListener('message', ({ data: st }) => {
@@ -413,6 +457,15 @@ function html() {
 			(c.checked ? '<a class="' + c.status.cls + '" data-cmd="report" data-arg="' + c.hash + '">' + esc(c.status.text) + '</a>' : '') +
 			'</li>').join('') : '<li>No commits on top of the base.</li>';
 		document.querySelectorAll('.steps button').forEach(b => b.disabled = !!st.busy);
+		$('coverRow').style.display = st.multi ? '' : 'none';
+		$('coverSubject').textContent = st.coverSubject || 'not written yet';
+		$('coverSubject').className = 'grow' + (st.coverSubject ? '' : ' warn');
+		$('outputDir').textContent = st.outputDir;
+		$('outputBox').style.display = st.output ? '' : 'none';
+		if (st.output) $('output').innerHTML = st.output.files.map(f =>
+			'<li data-cmd="openPatch" data-arg="' + esc(f) + '"><span class="grow mono">' + esc(f) + '</span></li>').join('');
+		for (const [id, key] of [['prefix', 'prefix'], ['to', 'to'], ['cc', 'cc']])
+			if (document.activeElement !== $(id)) $(id).value = st[key];
 		for (const el of document.querySelectorAll('[data-opt]')) {
 			if (document.activeElement === el) continue;
 			if (el.type === 'checkbox') el.checked = !!st.options[el.dataset.opt];
@@ -430,7 +483,8 @@ function html() {
  */
 function registerSeries(context, s) {
 	const series = new Series(context, s);
-	const view = new SeriesView(series);
+	const patches = new Patches(series);
+	const view = new SeriesView(series, patches);
 	context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider('kernelDev.series', view, { webviewOptions: { retainContextWhenHidden: true } }),
 		series.problems.collection,
@@ -438,8 +492,10 @@ function registerSeries(context, s) {
 		vscode.commands.registerCommand('kernelDev.series.check', () => series.checkSeries()),
 		vscode.commands.registerCommand('kernelDev.series.format', () => series.formatChanged()),
 		vscode.commands.registerCommand('kernelDev.series.pickBase', () => series.pickBase()),
+		vscode.commands.registerCommand('kernelDev.series.editCover', () => patches.editCover()),
+		vscode.commands.registerCommand('kernelDev.series.generate', () => patches.generate()),
 	);
-	return { series, view };
+	return { series, patches, view };
 }
 
 module.exports = { Series, SeriesView, registerSeries, html, summary };
