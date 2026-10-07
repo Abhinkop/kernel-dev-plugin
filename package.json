@@ -343,6 +343,33 @@
 					"when": "kernelDev.active && kernelDev.vmRunning",
 					"group": "navigation@-5"
 				}
+			],
+			"view/title": [
+				{
+					"command": "kernelDev.configure",
+					"when": "view == kernelDev.panel",
+					"group": "navigation@1"
+				},
+				{
+					"command": "kernelDev.build",
+					"when": "view == kernelDev.panel",
+					"group": "navigation@2"
+				},
+				{
+					"command": "kernelDev.run",
+					"when": "view == kernelDev.panel",
+					"group": "navigation@3"
+				},
+				{
+					"command": "kernelDev.debug",
+					"when": "view == kernelDev.panel",
+					"group": "navigation@4"
+				},
+				{
+					"command": "kernelDev.openSettings",
+					"when": "view == kernelDev.panel",
+					"group": "navigation@5"
+				}
 			]
 		},
 		"keybindings": [
@@ -686,6 +713,25 @@
 				}
 			}
 		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "kernelDev",
+					"title": "Kernel",
+					"icon": "media/kernel.svg"
+				}
+			]
+		},
+		"views": {
+			"kernelDev": [
+				{
+					"type": "webview",
+					"id": "kernelDev.panel",
+					"name": "Kernel",
+					"when": "kernelDev.active"
+				}
+			]
+		},
 		"submenus": [
 			{
 				"id": "kernelDev.target",

@@ -9,6 +9,7 @@ const { Kbuild } = require('./src/kbuild');
 const { Runner } = require('./src/runner');
 const { followSelection } = require('./src/clangd');
 const { syncContextKeys, pickArch, pickVariant, pickConfig } = require('./src/ui');
+const { KernelPanel } = require('./src/panel');
 const { ARCHES } = require('./src/arch');
 
 /** @param {vscode.ExtensionContext} context */
@@ -23,6 +24,9 @@ function activate(context) {
 	const kbuild = new Kbuild(s);
 	const runner = new Runner(context, s, kbuild);
 	syncContextKeys(context, s, runner);
+	const panel = new KernelPanel(context, s, kbuild, runner);
+	context.subscriptions.push(vscode.window.registerWebviewViewProvider('kernelDev.panel',
+		panel, { webviewOptions: { retainContextWhenHidden: true } }));
 
 	/** @param {'.o'|'.i'|'.s'} kind */
 	const compileCurrent = kind => () => {
