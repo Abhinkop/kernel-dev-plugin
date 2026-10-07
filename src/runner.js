@@ -219,6 +219,8 @@ class Runner {
 				'-serial', 'chardev:kdcon',
 				'-mon', 'chardev=kdcon,mode=readline',
 				'-no-reboot',
+				...(this.s.get('run.shareBuildDir', false)
+					? ['-virtfs', `local,path=${state.buildDir},mount_tag=kbuild,security_model=none,readonly=on`] : []),
 				...qemuArgs,
 				...gdbArgs,
 			],
@@ -239,7 +241,9 @@ class Runner {
 			cwd: this.s.root,
 			shellPath: cmd,
 			shellArgs: args,
-			message: `\x1b[2m$ ${[cmd, ...args].map(sq).join(' ')}\r\n(Ctrl-A X quits QEMU)\x1b[0m\r\n`,
+			message: `\x1b[2m$ ${[cmd, ...args].map(sq).join(' ')}\r\n(Ctrl-A X quits QEMU)\x1b[0m\r\n` +
+				(this.s.get('run.shareBuildDir', false) && this.s.get('run.mode', 'qemu') !== 'virtme'
+					? `\x1b[2mBuild directory shared; in the guest: mkdir -p /mnt/kbuild && mount -t 9p -o trans=virtio,version=9p2000.L kbuild /mnt/kbuild\r\nthen e.g. insmod /mnt/kbuild/drivers/.../foo.ko\x1b[0m\r\n` : ''),
 			iconPath: new vscode.ThemeIcon(debug ? 'debug-alt' : 'vm-running'),
 		});
 		this.vm.show();

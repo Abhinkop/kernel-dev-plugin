@@ -119,6 +119,8 @@ class KernelPanel {
 		case 'run.cmdline':
 		case 'run.memory':
 			return this.update(key, text);
+		case 'run.shareBuildDir':
+			return this.update(key, !!text);
 		case 'run.smp':
 			return this.update(key, Math.max(1, parseInt(text, 10) || 1));
 		case 'make.args':
@@ -197,6 +199,7 @@ class KernelPanel {
 				'run.cmdline': s.get('run.cmdline', ''),
 				'run.memory': s.get('run.memory', '2G'),
 				'run.smp': String(s.get('run.smp', 2)),
+				'run.shareBuildDir': s.get('run.shareBuildDir', false),
 			},
 		});
 	}
@@ -281,6 +284,7 @@ function html() {
 		<div><label for="memory">Memory</label><input id="memory" data-opt="run.memory"></div>
 		<div><label for="smp">CPUs</label><input id="smp" data-opt="run.smp" type="number" min="1"></div>
 	</div>
+	<label class="check"><input type="checkbox" id="shareBuildDir" data-opt="run.shareBuildDir"> Share the build directory with the guest (9p, for insmod)</label>
 	<p class="hint">Options are saved to your user settings and apply to every kernel tree. <a data-cmd="kernelDev.openSettings">All settings…</a></p>
 `, `
 	const fill = (sel, items, value) => {
@@ -292,7 +296,7 @@ function html() {
 	$('browseConfig').addEventListener('click', () => vscode.postMessage({ type: 'config', value: '$browse' }));
 	$('browseInitramfs').addEventListener('click', () => vscode.postMessage({ type: 'browseInitramfs' }));
 	document.querySelectorAll('[data-opt]').forEach(el =>
-		el.addEventListener('change', () => vscode.postMessage({ type: 'option', key: el.dataset.opt, value: el.value })));
+		el.addEventListener('change', () => vscode.postMessage({ type: 'option', key: el.dataset.opt, value: el.type === 'checkbox' ? el.checked : el.value })));
 
 	window.addEventListener('message', ({ data: st }) => {
 		if (st.type !== 'state') return;
@@ -313,7 +317,10 @@ function html() {
 		$('task').textContent = st.busy ? st.busy + '…' : 'idle';
 		$('task').className = st.busy ? 'busy' : '';
 		for (const el of document.querySelectorAll('[data-opt]'))
-			if (document.activeElement !== el) el.value = st.options[el.dataset.opt];
+			if (document.activeElement !== el) {
+				if (el.type === 'checkbox') el.checked = !!st.options[el.dataset.opt];
+				else el.value = st.options[el.dataset.opt];
+			}
 	});
 	vscode.postMessage({ type: 'ready' });
 `);

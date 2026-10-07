@@ -344,6 +344,16 @@
 				"command": "kernelDev.oops.decode",
 				"title": "Decode Stack Trace (selection or clipboard)",
 				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.buildModules",
+				"title": "Build Modules",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.buildDirectory",
+				"title": "Build This Directory",
+				"category": "Kernel"
 			}
 		],
 		"menus": {
@@ -579,6 +589,14 @@
 				{
 					"command": "kernelDev.oops.decode",
 					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.buildModules",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.buildDirectory",
+					"when": "kernelDev.active"
 				}
 			],
 			"editor/context": [
@@ -616,6 +634,11 @@
 					"command": "kernelDev.oops.decode",
 					"when": "kernelDev.active && editorHasSelection",
 					"group": "kernel@9"
+				},
+				{
+					"command": "kernelDev.buildDirectory",
+					"when": "kernelDev.active && resourceScheme == file",
+					"group": "kernel@4"
 				}
 			],
 			"kernelDev.target": [
@@ -662,6 +685,10 @@
 				{
 					"command": "kernelDev.openSettings",
 					"group": "5_settings@1"
+				},
+				{
+					"command": "kernelDev.buildModules",
+					"group": "4_tools@4"
 				}
 			],
 			"editor/title": [
@@ -830,6 +857,11 @@
 					"command": "kernelDev.history.showFile",
 					"when": "kernelDev.active && !explorerResourceIsFolder",
 					"group": "kernelGit@1"
+				},
+				{
+					"command": "kernelDev.buildDirectory",
+					"when": "kernelDev.active",
+					"group": "kernel@1"
 				}
 			]
 		},
@@ -1106,6 +1138,11 @@
 						"type": "boolean",
 						"default": true,
 						"description": "Run an incremental build before Run and Debug."
+					},
+					"kernelDev.run.shareBuildDir": {
+						"type": "boolean",
+						"default": false,
+						"markdownDescription": "Share the build directory with the QEMU guest over 9p (read-only), so freshly built modules can be loaded with `insmod` without rebuilding the initramfs. Configure then enables the 9p and virtio options; Run shows the `mount` command for the guest."
 					}
 				}
 			},

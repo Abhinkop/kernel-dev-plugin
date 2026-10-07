@@ -116,6 +116,8 @@ function activate(context) {
 		['kernelDev.rebuild', async () => (await kbuild.clean()) === 0 && kbuild.build()],
 		['kernelDev.clean', () => kbuild.clean()],
 		['kernelDev.mrproper', () => kbuild.mrproper()],
+		['kernelDev.buildModules', () => kbuild.buildModules()],
+		['kernelDev.buildDirectory', (/** @type {vscode.Uri | undefined} */ uri) => kbuild.buildDirectory(uri)],
 		['kernelDev.menuconfig', () => kbuild.interactiveConfig('menuconfig')],
 		['kernelDev.nconfig', () => kbuild.interactiveConfig('nconfig')],
 		['kernelDev.compileFile', compileCurrent('.o')],

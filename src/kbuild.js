@@ -12,6 +12,11 @@ const { buildRequirements, installCommand, describe } = require('./tools');
 /** @typedef {import('./settings').Settings} Settings */
 /** @typedef {import('./settings').Configured} Configured */
 
+// What the guest needs to mount the build directory shared over 9p.
+const SHARE_OPTIONS = {
+	NET_9P: 'y', NET_9P_VIRTIO: 'y', '9P_FS': 'y', VIRTIO: 'y', VIRTIO_PCI: 'y', PCI: 'y', MODULES: 'y', MODULE_UNLOAD: 'y',
+};
+
 class Kbuild {
 	/** @param {Settings} settings */
 	constructor(settings) {
@@ -47,6 +52,7 @@ class Kbuild {
 			...(s.get('run.mode', 'qemu') === 'virtme'
 				? s.get('configure.virtmeOptions', {})
 				: s.get('configure.qemuOptions', {})),
+			...(s.get('run.shareBuildDir', false) ? SHARE_OPTIONS : {}),
 			...(variant === 'debug' ? s.get('configure.debugOptions', {}) : s.get('configure.releaseOptions', {})),
 			...s.get('configure.options', {}),
 		};
@@ -133,6 +139,51 @@ class Kbuild {
 		if (code === 0)
 			s.clearConfigured();
 		return code;
+	}
+
+	/** make modules with the recorded arguments. */
+	async buildModules() {
+		const state = this.s.configured();
+		if (!state) {
+			vscode.window.showWarningMessage('Kernel: run Configure first.');
+			return 1;
+		}
+		return runTask(this.folder, `Modules ${state.arch} ${state.variant}`, 'bash', ['-c', this.make(state.makeArgs, 'modules')],
+			{ problemMatcher: ['$gcc'] });
+	}
+
+	/**
+	 * Build one directory of the tree, built-in objects and modules
+	 * (make <dir>/).
+	 * @param {vscode.Uri | undefined} uri a folder, or a file whose folder is built
+	 */
+	async buildDirectory(uri) {
+		const state = this.s.configured();
+		if (!state) {
+			vscode.window.showWarningMessage('Kernel: run Configure first.');
+			return 1;
+		}
+		const target = uri || vscode.window.activeTextEditor?.document.uri;
+		if (!target)
+			return 1;
+		let dir = target.fsPath;
+		if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory())
+			dir = path.dirname(dir);
+		const rel = path.relative(this.root, dir);
+		if (!rel || rel.startsWith('..')) {
+			vscode.window.showWarningMessage('Kernel: pick a directory inside the kernel tree.');
+			return 1;
+		}
+		// make <dir>/ compiles the directory but links no modules (that is
+		// modpost's job), so link each module it compiled: Kbuild leaves a
+		// <name>.mod next to each module's objects.
+		const script = [
+			'set -e',
+			this.make(state.makeArgs, `${rel}/`),
+			`mods=$(cd ${sq(state.buildDir)} && find ${sq(rel)} -name '*.mod' | sed 's/[.]mod$/.ko/')`,
+			`if [ -n "$mods" ]; then ${this.make(state.makeArgs)} $mods; echo "==> modules:"; echo "$mods"; fi`,
+		].join('\n');
+		return runTask(this.folder, `Build ${rel}/`, 'bash', ['-c', script], { problemMatcher: ['$gcc'] });
 	}
 
 	/** menuconfig / nconfig on the configured build, in a real terminal. @param {string} tool */
