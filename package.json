@@ -299,6 +299,16 @@
 				"command": "kernelDev.series.generate",
 				"title": "Generate Patches (git format-patch)",
 				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.apply.fetch",
+				"title": "Apply Series from lore…",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.apply.openFiles",
+				"title": "Apply mbox / Patch Files…",
+				"category": "Kernel"
 			}
 		],
 		"menus": {
@@ -497,6 +507,14 @@
 				},
 				{
 					"command": "kernelDev.series.generate",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.apply.fetch",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.apply.openFiles",
 					"when": "kernelDev.active"
 				}
 			],
@@ -1157,6 +1175,12 @@
 					"type": "webview",
 					"id": "kernelDev.series",
 					"name": "Series",
+					"when": "kernelDev.active"
+				},
+				{
+					"type": "webview",
+					"id": "kernelDev.apply",
+					"name": "Apply",
 					"when": "kernelDev.active"
 				},
 				{
