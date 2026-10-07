@@ -4,6 +4,8 @@
 const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
+const { Settings } = require('./src/settings');
+const { Kbuild } = require('./src/kbuild');
 
 /** @param {vscode.ExtensionContext} context */
 function activate(context) {
@@ -12,6 +14,32 @@ function activate(context) {
 	if (!folder)
 		return;
 	vscode.commands.executeCommand('setContext', 'kernelDev.active', true);
+
+	const s = new Settings(context, folder);
+	const kbuild = new Kbuild(s);
+
+	/** @param {'.o'|'.i'|'.s'} kind */
+	const compileCurrent = kind => () => {
+		const editor = vscode.window.activeTextEditor;
+		return editor ? kbuild.compileFile(editor.document.uri, kind) : undefined;
+	};
+
+	/** @type {[string, (...args: any[]) => any][]} */
+	const commands = [
+		['kernelDev.configure', () => kbuild.configure()],
+		['kernelDev.build', () => kbuild.build()],
+		['kernelDev.rebuild', async () => (await kbuild.clean()) === 0 && kbuild.build()],
+		['kernelDev.clean', () => kbuild.clean()],
+		['kernelDev.mrproper', () => kbuild.mrproper()],
+		['kernelDev.menuconfig', () => kbuild.interactiveConfig('menuconfig')],
+		['kernelDev.nconfig', () => kbuild.interactiveConfig('nconfig')],
+		['kernelDev.compileFile', compileCurrent('.o')],
+		['kernelDev.preprocessFile', compileCurrent('.i')],
+		['kernelDev.assembleFile', compileCurrent('.s')],
+		['kernelDev.openSettings', () => vscode.commands.executeCommand('workbench.action.openSettings', 'kernelDev')],
+	];
+	for (const [id, fn] of commands)
+		context.subscriptions.push(vscode.commands.registerCommand(id, fn));
 }
 
 function deactivate() {}

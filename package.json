@@ -27,5 +27,321 @@
 	],
 	"activationEvents": [
 		"workspaceContains:Kbuild"
-	]
+	],
+	"contributes": {
+		"commands": [
+			{
+				"command": "kernelDev.configure",
+				"title": "Configure",
+				"category": "Kernel",
+				"icon": "$(gear)"
+			},
+			{
+				"command": "kernelDev.build",
+				"title": "Build",
+				"category": "Kernel",
+				"icon": "$(tools)"
+			},
+			{
+				"command": "kernelDev.rebuild",
+				"title": "Rebuild (Clean + Build)",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.clean",
+				"title": "Clean",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.mrproper",
+				"title": "Full Clean (mrproper)",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.menuconfig",
+				"title": "menuconfig",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.nconfig",
+				"title": "nconfig",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.compileFile",
+				"title": "Compile Current File",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.preprocessFile",
+				"title": "Preprocess Current File (.i)",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.assembleFile",
+				"title": "Show Assembly for Current File (.s)",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.openSettings",
+				"title": "Open Settings",
+				"category": "Kernel",
+				"icon": "$(settings)"
+			}
+		],
+		"menus": {
+			"commandPalette": [
+				{
+					"command": "kernelDev.configure",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.build",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.rebuild",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.clean",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.mrproper",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.menuconfig",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.nconfig",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.compileFile",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.preprocessFile",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.assembleFile",
+					"when": "kernelDev.active"
+				}
+			],
+			"editor/context": [
+				{
+					"command": "kernelDev.compileFile",
+					"when": "kernelDev.active && resourceExtname =~ /^\\.[cS]$/",
+					"group": "kernel@1"
+				},
+				{
+					"command": "kernelDev.preprocessFile",
+					"when": "kernelDev.active && resourceExtname == .c",
+					"group": "kernel@2"
+				},
+				{
+					"command": "kernelDev.assembleFile",
+					"when": "kernelDev.active && resourceExtname == .c",
+					"group": "kernel@3"
+				}
+			]
+		},
+		"keybindings": [
+			{
+				"command": "kernelDev.build",
+				"key": "f7",
+				"when": "kernelDev.active"
+			},
+			{
+				"command": "kernelDev.compileFile",
+				"key": "ctrl+f7",
+				"when": "kernelDev.active && editorLangId == c"
+			}
+		],
+		"configuration": [
+			{
+				"title": "Configure",
+				"order": 1,
+				"properties": {
+					"kernelDev.arch": {
+						"type": "string",
+						"enum": [
+							"",
+							"x86_64",
+							"arm64",
+							"riscv64"
+						],
+						"default": "",
+						"description": "Default architecture for trees where none was picked in the Kernel panel. Empty: the host architecture."
+					},
+					"kernelDev.variant": {
+						"type": "string",
+						"enum": [
+							"debug",
+							"release"
+						],
+						"default": "debug",
+						"description": "Default build variant for trees where none was picked in the Kernel panel."
+					},
+					"kernelDev.configure.defconfig": {
+						"type": "string",
+						"default": "defconfig",
+						"markdownDescription": "Default base config: one or more make targets (`defconfig`, `defconfig kvm_guest.config`, `tinyconfig`) or a path to a `.config` file. The status bar picker overrides it per arch."
+					},
+					"kernelDev.configure.fragments": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"default": [],
+						"markdownDescription": "Config fragments merged after the base config (`scripts/kconfig/merge_config.sh`). Paths relative to the kernel tree, e.g. `kernel/configs/debug.config`."
+					},
+					"kernelDev.configure.options": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						},
+						"default": {},
+						"markdownDescription": "Kconfig options applied last, without the `CONFIG_` prefix: `\"y\"`, `\"n\"`, `\"m\"`, a number or a string. Example: `{ \"KASAN\": \"y\", \"LOG_BUF_SHIFT\": \"18\" }`."
+					},
+					"kernelDev.configure.debugOptions": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						},
+						"default": {
+							"DEBUG_KERNEL": "y",
+							"DEBUG_INFO_NONE": "n",
+							"DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT": "y",
+							"DEBUG_INFO_REDUCED": "n",
+							"DEBUG_INFO_SPLIT": "n",
+							"GDB_SCRIPTS": "y"
+						},
+						"markdownDescription": "Kconfig options for the **Debug** variant."
+					},
+					"kernelDev.configure.releaseOptions": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						},
+						"default": {
+							"DEBUG_INFO_NONE": "y",
+							"DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT": "n",
+							"DEBUG_INFO_DWARF4": "n",
+							"DEBUG_INFO_DWARF5": "n"
+						},
+						"markdownDescription": "Kconfig options for the **Release** variant."
+					},
+					"kernelDev.configure.initramfsOptions": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						},
+						"default": {
+							"BLK_DEV_INITRD": "y",
+							"DEVTMPFS": "y",
+							"DEVTMPFS_MOUNT": "y",
+							"TMPFS": "y",
+							"BINFMT_ELF": "y",
+							"BINFMT_SCRIPT": "y"
+						},
+						"markdownDescription": "Kconfig options needed to boot the busybox initramfs (applied when `kernelDev.run.mode` is `initramfs`)."
+					},
+					"kernelDev.configure.virtmeOptions": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						},
+						"default": {
+							"BLK_DEV_INITRD": "y",
+							"DEVTMPFS": "y",
+							"TMPFS": "y",
+							"BINFMT_SCRIPT": "y",
+							"VIRTIO": "y",
+							"VIRTIO_PCI": "y",
+							"VIRTIO_MMIO": "y",
+							"VIRTIO_CONSOLE": "y",
+							"VIRTIO_BLK": "y",
+							"VIRTIO_NET": "y",
+							"SCSI_VIRTIO": "y",
+							"NET_9P": "y",
+							"NET_9P_VIRTIO": "y",
+							"9P_FS": "y",
+							"9P_FS_POSIX_ACL": "y",
+							"FUSE_FS": "y",
+							"VIRTIO_FS": "y",
+							"OVERLAY_FS": "y",
+							"UNIX": "y",
+							"INET": "y"
+						},
+						"markdownDescription": "Kconfig options needed by virtme-ng (applied when `kernelDev.run.mode` is `virtme`)."
+					}
+				}
+			},
+			{
+				"title": "Build",
+				"order": 2,
+				"properties": {
+					"kernelDev.toolchain": {
+						"type": "string",
+						"enum": [
+							"gcc",
+							"llvm"
+						],
+						"default": "gcc",
+						"markdownDescription": "`gcc`: `CROSS_COMPILE=<prefix>` when cross compiling. `llvm`: `LLVM=1` for every arch. Takes effect at the next Configure."
+					},
+					"kernelDev.crossCompile": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						},
+						"default": {},
+						"markdownDescription": "`CROSS_COMPILE` prefix per arch for gcc builds. Defaults: `aarch64-linux-gnu-`, `riscv64-linux-gnu-`, `x86_64-linux-gnu-` (none for the host arch)."
+					},
+					"kernelDev.make.args": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"default": [],
+						"markdownDescription": "Extra make arguments, recorded at Configure and used by every Build, e.g. `[\"W=1\"]`, `[\"CC=ccache gcc\"]`, `[\"KCFLAGS=-Og\"]`."
+					},
+					"kernelDev.make.jobs": {
+						"type": "integer",
+						"minimum": 0,
+						"default": 0,
+						"description": "make -j; 0 = number of CPUs."
+					},
+					"kernelDev.buildDirectory": {
+						"type": "string",
+						"default": "build/${arch}/${variant}",
+						"markdownDescription": "Build output (`O=`), relative to the kernel tree or absolute. `${arch}` and `${variant}` are substituted."
+					},
+					"kernelDev.clangd.updateCompileCommands": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "After each build, write the build's `compile_commands.json` to the root of the tree for clangd (gcc-only flags stripped) and restart clangd."
+					},
+					"kernelDev.terminal.afterTask": {
+						"type": "string",
+						"enum": [
+							"waitForKey",
+							"close"
+						],
+						"default": "waitForKey",
+						"enumDescriptions": [
+							"Keep the terminal open until you press a key",
+							"Close the terminal as soon as the step finishes (errors stay in the Problems panel)"
+						],
+						"description": "What happens to the terminal of Configure / Build / Clean / Full clean when it finishes."
+					}
+				}
+			}
+		]
+	}
 }
