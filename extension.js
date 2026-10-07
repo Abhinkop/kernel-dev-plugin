@@ -19,6 +19,7 @@ const { registerSeries } = require('./src/series');
 const { registerApply } = require('./src/apply');
 const { registerBisect } = require('./src/bisect');
 const { registerOops } = require('./src/oops');
+const { registerDt } = require('./src/dt');
 
 /** @param {vscode.ExtensionContext} context */
 function activate(context) {
@@ -40,7 +41,8 @@ function activate(context) {
 
 	// Kernel Git tab.
 	context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(SCHEME, new GitDocuments(s.root)));
-	registerSeries(context, s);
+	const { series } = registerSeries(context, s);
+	series.dt = registerDt(context, s);
 	registerApply(context, s.root);
 	registerBlame(context, s.root);
 	registerHistory(context, s.root);

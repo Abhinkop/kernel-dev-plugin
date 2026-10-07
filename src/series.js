@@ -48,6 +48,8 @@ class Series {
 		this.busy = '';
 		this.lastBuild = '';
 		this.problems = new checkpatch.Problems(this.root);
+		/** @type {import('./dt').DtChecks | undefined} set when the devicetree checks are available */
+		this.dt = undefined;
 		this._onDidChange = new vscode.EventEmitter();
 		this.onDidChange = this._onDidChange.event;
 	}
@@ -173,9 +175,22 @@ class Series {
 	 * @param {string} mergeBase
 	 */
 	async buildChecks(mergeBase) {
+		const changed = (await git(this.root, ['diff', '--name-only', '--diff-filter=d', mergeBase])).split('\n').filter(Boolean);
+		await this.compileChecks(changed);
+		// Devicetree sources and bindings, when the series touches them.
+		if (this.dt && changed.some(f => /\.dtsi?$/.test(f) || (f.startsWith('Documentation/devicetree/bindings/') && f.endsWith('.yaml')))) {
+			this.busy = 'DT check';
+			this.changed();
+			this.lastBuild += ` · ${await this.dt.check(changed)}`;
+			this.busy = '';
+			this.changed();
+		}
+	}
+
+	/** @param {string[]} changed repository-relative files changed since the base */
+	async compileChecks(changed) {
 		const state = this.s.configured();
-		const files = (await git(this.root, ['diff', '--name-only', '--diff-filter=d', mergeBase]))
-			.split('\n').filter(f => /\.c$/.test(f) && !f.startsWith('tools/') && !f.startsWith('scripts/'));
+		const files = changed.filter(f => /\.c$/.test(f) && !f.startsWith('tools/') && !f.startsWith('scripts/'));
 		if (!files.length) {
 			this.lastBuild = 'no C files changed';
 			return this.changed();
