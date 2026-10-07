@@ -62,6 +62,45 @@ describe('extension', () => {
 			assert.ok(!/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(c.title), `no emoji: ${c.title}`);
 	});
 
+	describe('menus', () => {
+		const menus = pkg.contributes.menus;
+		const STEPS = ['kernelDev.configure', 'kernelDev.build', 'kernelDev.run', 'kernelDev.debug', 'kernelDev.stop'];
+		// The global steps of each view: they belong on rows of their own and
+		// in toolbars, never on the right-click menu of unrelated rows.
+		const GLOBAL = [...STEPS, 'kernelDev.series.check', 'kernelDev.series.checkWorking', 'kernelDev.series.generate',
+			'kernelDev.series.dryRun', 'kernelDev.series.send', 'kernelDev.apply.continue', 'kernelDev.apply.skip',
+			'kernelDev.apply.abort', 'kernelDev.apply.applyCurrent', 'kernelDev.apply.applyNewBranch', 'kernelDev.apply.fetch',
+			'kernelDev.bisect.good', 'kernelDev.bisect.bad', 'kernelDev.bisect.skip', 'kernelDev.bisect.reset', 'kernelDev.bisect.start'];
+
+		it('puts Configure, Build, Run and Debug as buttons on every kernel editor\'s toolbar', () => {
+			for (const c of STEPS) {
+				const i = menus['editor/title'].find(m => m.command === c);
+				assert.ok(i, `${c} on the editor toolbar`);
+				assert.match(i.group, /^navigation/, `${c} is a button, not in the ... menu`);
+				assert.match(i.when, /^kernelDev\.active && resourceScheme != kernel-git/, `${c} on every editor of the tree: ${i.when}`);
+				assert.ok(pkg.contributes.commands.find(x => x.command === c).icon, `${c} has an icon`);
+			}
+		});
+
+		it('puts the steps on the Kernel view toolbar', () => {
+			for (const c of STEPS)
+				assert.ok(menus['view/title'].some(m => m.command === c && /view == kernelDev\.kernel/.test(m.when) && /^navigation/.test(m.group)), c);
+		});
+
+		it('keeps the editor and Explorer right-click menus about the file', () => {
+			for (const menu of ['editor/context', 'explorer/context', 'kernelDev.editorContext', 'kernelDev.explorerContext'])
+				for (const i of menus[menu] || [])
+					assert.ok(!GLOBAL.includes(i.command), `${menu} must not offer ${i.command}`);
+		});
+
+		it('ties every row action to its kind of row', () => {
+			// A step may be on the row it is about (Stop on the running VM,
+			// Check on "Working changes"), never on every row of a view.
+			for (const i of menus['view/item/context'])
+				assert.match(i.when, /viewItem ==/, `${i.command} would show on every row: ${i.when}`);
+		});
+	});
+
 	it('every setting has a default, a description and resource scope', () => {
 		for (const sec of pkg.contributes.configuration)
 			for (const [k, v] of Object.entries(sec.properties)) {
