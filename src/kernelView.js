@@ -196,7 +196,8 @@ class KernelView {
 		switch (o.kind) {
 		case 'enum': return o.choices?.find(c => c.value === v)?.label || String(v ?? '');
 		case 'bool': return v ? 'on' : 'off';
-		case 'args': case 'words': return (v || []).join(' ') || 'none';
+		case 'args': return joinArgs(v || []) || 'none';
+		case 'words': return (v || []).join(' ') || 'none';
 		case 'options': return Object.keys(v || {}).length ? Object.entries(v).map(([k, x]) => `${k}=${x}`).join(' ') : 'none';
 		case 'int': return String(v ?? '');
 		case 'archString': return (v || {})[s.arch] ? `${(v || {})[s.arch]} (${s.arch})` : `default (${s.arch}: ${isNative(s.arch) ? 'native' : archInfo(s.arch).gccPrefix})`;
