@@ -166,6 +166,82 @@
 				"command": "kernelDev.followSelection",
 				"title": "Point clangd at Selected Build",
 				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.git.openCommit",
+				"title": "Open Commit",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.git.commitWhole",
+				"title": "Show Whole Commit",
+				"category": "Kernel",
+				"icon": "$(files)"
+			},
+			{
+				"command": "kernelDev.git.commitFileOnly",
+				"title": "Show Only This File",
+				"category": "Kernel",
+				"icon": "$(file)"
+			},
+			{
+				"command": "kernelDev.history.showFile",
+				"title": "Show File History",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.history.showLines",
+				"title": "Show History of Selected Lines",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.history.loadMore",
+				"title": "Load More History",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.history.refresh",
+				"title": "Refresh",
+				"category": "Kernel",
+				"icon": "$(refresh)"
+			},
+			{
+				"command": "kernelDev.history.filter",
+				"title": "Filter by Message or Author…",
+				"category": "Kernel",
+				"icon": "$(filter)"
+			},
+			{
+				"command": "kernelDev.history.clearFilter",
+				"title": "Clear Filter",
+				"category": "Kernel",
+				"icon": "$(clear-all)"
+			},
+			{
+				"command": "kernelDev.git.copyHash",
+				"title": "Copy Commit Hash",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.git.copyFixes",
+				"title": "Copy Fixes: Line",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.git.openAtCommit",
+				"title": "Open File at This Commit",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.git.compareWithPrevious",
+				"title": "Compare with Previous Version",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.git.openOnLore",
+				"title": "Open on lore.kernel.org",
+				"category": "Kernel",
+				"icon": "$(link-external)"
 			}
 		],
 		"menus": {
@@ -265,6 +341,62 @@
 				{
 					"command": "kernelDev.installTools",
 					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.git.openCommit",
+					"when": "false"
+				},
+				{
+					"command": "kernelDev.git.commitWhole",
+					"when": "false"
+				},
+				{
+					"command": "kernelDev.git.commitFileOnly",
+					"when": "false"
+				},
+				{
+					"command": "kernelDev.history.loadMore",
+					"when": "false"
+				},
+				{
+					"command": "kernelDev.git.openAtCommit",
+					"when": "false"
+				},
+				{
+					"command": "kernelDev.git.compareWithPrevious",
+					"when": "false"
+				},
+				{
+					"command": "kernelDev.history.showFile",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.history.showLines",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.history.refresh",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.history.filter",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.history.clearFilter",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.git.copyHash",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.git.copyFixes",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.git.openOnLore",
+					"when": "kernelDev.active"
 				}
 			],
 			"editor/context": [
@@ -282,6 +414,16 @@
 					"command": "kernelDev.assembleFile",
 					"when": "kernelDev.active && resourceExtname == .c",
 					"group": "kernel@3"
+				},
+				{
+					"command": "kernelDev.history.showFile",
+					"when": "kernelDev.active && resourceScheme == file",
+					"group": "kernelGit@1"
+				},
+				{
+					"command": "kernelDev.history.showLines",
+					"when": "kernelDev.active && resourceScheme == file && editorHasSelection",
+					"group": "kernelGit@2"
 				}
 			],
 			"kernelDev.target": [
@@ -333,33 +475,58 @@
 			"editor/title": [
 				{
 					"submenu": "kernelDev.target",
-					"when": "kernelDev.active",
+					"when": "kernelDev.active && resourceScheme != kernel-git",
 					"group": "navigation@-10"
 				},
 				{
 					"command": "kernelDev.configure",
-					"when": "kernelDev.active",
+					"when": "kernelDev.active && resourceScheme != kernel-git",
 					"group": "navigation@-9"
 				},
 				{
 					"command": "kernelDev.build",
-					"when": "kernelDev.active",
+					"when": "kernelDev.active && resourceScheme != kernel-git",
 					"group": "navigation@-8"
 				},
 				{
 					"command": "kernelDev.run",
-					"when": "kernelDev.active && !kernelDev.vmRunning",
+					"when": "kernelDev.active && resourceScheme != kernel-git && !kernelDev.vmRunning",
 					"group": "navigation@-7"
 				},
 				{
 					"command": "kernelDev.debug",
-					"when": "kernelDev.active && !kernelDev.vmRunning",
+					"when": "kernelDev.active && resourceScheme != kernel-git && !kernelDev.vmRunning",
 					"group": "navigation@-6"
 				},
 				{
 					"command": "kernelDev.stop",
-					"when": "kernelDev.active && kernelDev.vmRunning",
+					"when": "kernelDev.active && resourceScheme != kernel-git && kernelDev.vmRunning",
 					"group": "navigation@-5"
+				},
+				{
+					"command": "kernelDev.git.commitWhole",
+					"when": "resourceScheme == kernel-git && resourcePath =~ /^\\/file\\//",
+					"group": "navigation@1"
+				},
+				{
+					"command": "kernelDev.git.commitFileOnly",
+					"when": "resourceScheme == kernel-git && resourcePath =~ /^\\/full\\//",
+					"group": "navigation@1"
+				},
+				{
+					"command": "kernelDev.git.openOnLore",
+					"when": "resourceScheme == kernel-git && resourcePath =~ /^\\/(commit|full|file)\\//",
+					"group": "navigation@2"
+				},
+				{
+					"command": "kernelDev.git.copyFixes",
+					"when": "resourceScheme == kernel-git && resourcePath =~ /^\\/(commit|full|file)\\//",
+					"group": "1_kernel@1"
+				},
+				{
+					"command": "kernelDev.git.copyHash",
+					"when": "resourceScheme == kernel-git && resourcePath =~ /^\\/(commit|full|file)\\//",
+					"group": "1_kernel@2"
 				}
 			],
 			"view/title": [
@@ -387,6 +554,55 @@
 					"command": "kernelDev.openSettings",
 					"when": "view == kernelDev.panel",
 					"group": "navigation@5"
+				},
+				{
+					"command": "kernelDev.history.filter",
+					"when": "view == kernelDev.history",
+					"group": "navigation@1"
+				},
+				{
+					"command": "kernelDev.history.clearFilter",
+					"when": "view == kernelDev.history",
+					"group": "navigation@2"
+				},
+				{
+					"command": "kernelDev.history.refresh",
+					"when": "view == kernelDev.history",
+					"group": "navigation@3"
+				}
+			],
+			"view/item/context": [
+				{
+					"command": "kernelDev.git.copyHash",
+					"when": "view == kernelDev.history && viewItem == commit",
+					"group": "1_copy@1"
+				},
+				{
+					"command": "kernelDev.git.copyFixes",
+					"when": "view == kernelDev.history && viewItem == commit",
+					"group": "1_copy@2"
+				},
+				{
+					"command": "kernelDev.git.openAtCommit",
+					"when": "view == kernelDev.history && viewItem == commit",
+					"group": "2_open@1"
+				},
+				{
+					"command": "kernelDev.git.compareWithPrevious",
+					"when": "view == kernelDev.history && viewItem == commit",
+					"group": "2_open@2"
+				},
+				{
+					"command": "kernelDev.git.openOnLore",
+					"when": "view == kernelDev.history && viewItem == commit",
+					"group": "2_open@3"
+				}
+			],
+			"explorer/context": [
+				{
+					"command": "kernelDev.history.showFile",
+					"when": "kernelDev.active && !explorerResourceIsFolder",
+					"group": "kernelGit@1"
 				}
 			]
 		},
@@ -729,6 +945,11 @@
 					"id": "kernelDev",
 					"title": "Kernel",
 					"icon": "media/kernel.svg"
+				},
+				{
+					"id": "kernelGit",
+					"title": "Kernel Git",
+					"icon": "media/git.svg"
 				}
 			]
 		},
@@ -738,6 +959,13 @@
 					"type": "webview",
 					"id": "kernelDev.panel",
 					"name": "Kernel",
+					"when": "kernelDev.active"
+				}
+			],
+			"kernelGit": [
+				{
+					"id": "kernelDev.history",
+					"name": "File History",
 					"when": "kernelDev.active"
 				}
 			]

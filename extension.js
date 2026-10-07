@@ -12,6 +12,8 @@ const { syncContextKeys, pickArch, pickVariant, pickConfig } = require('./src/ui
 const { KernelPanel } = require('./src/panel');
 const { ARCHES } = require('./src/arch');
 const tools = require('./src/tools');
+const { SCHEME, GitDocuments } = require('./src/commits');
+const { registerHistory } = require('./src/history');
 
 /** @param {vscode.ExtensionContext} context */
 function activate(context) {
@@ -28,6 +30,10 @@ function activate(context) {
 	const panel = new KernelPanel(context, s, kbuild, runner);
 	context.subscriptions.push(vscode.window.registerWebviewViewProvider('kernelDev.panel',
 		panel, { webviewOptions: { retainContextWhenHidden: true } }));
+
+	// Kernel Git tab.
+	context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(SCHEME, new GitDocuments(s.root)));
+	registerHistory(context, s.root);
 
 	// Check the host for everything the current selection needs: when the
 	// extension loads and whenever arch / toolchain / run mode change. The
