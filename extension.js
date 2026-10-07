@@ -9,8 +9,7 @@ const { Kbuild } = require('./src/kbuild');
 const { Runner } = require('./src/runner');
 const { followSelection } = require('./src/clangd');
 const { syncContextKeys, pickArch, pickVariant, pickConfig } = require('./src/ui');
-const { KernelPanel } = require('./src/panel');
-const { ARCHES } = require('./src/arch');
+const { registerKernelView } = require('./src/kernelView');
 const tools = require('./src/tools');
 const { SCHEME, GitDocuments } = require('./src/commits');
 const { registerHistory } = require('./src/history');
@@ -36,50 +35,53 @@ function activate(context) {
 	syncContextKeys(context, s, runner);
 	const oops = registerOops(context, s);
 	runner.onBoot = (log, state) => oops.watch(log, state);
-	const panel = new KernelPanel(context, s, kbuild, runner);
-	context.subscriptions.push(vscode.window.registerWebviewViewProvider('kernelDev.panel',
-		panel, { webviewOptions: { retainContextWhenHidden: true } }));
+	const kernelView = registerKernelView(context, s, kbuild, runner);
 
 	// Kernel Git tab.
 	context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(SCHEME, new GitDocuments(s.root)));
-	const { series } = registerSeries(context, s);
+	const seriesParts = registerSeries(context, s);
+	const series = seriesParts.series;
 	series.dt = registerDt(context, s);
-	registerKunit(context, s);
-	registerApply(context, s.root);
-	registerBlame(context, s.root);
-	registerHistory(context, s.root);
-	registerBisect(context, s);
+	const kunit = registerKunit(context, s);
+	const applyParts = registerApply(context, s);
+	const blameParts = registerBlame(context, s.root);
+	const history = registerHistory(context, s.root);
+	const bisectParts = registerBisect(context, s);
 
 	// Check the host for everything the current selection needs: when the
 	// extension loads and whenever arch / toolchain / run mode change. The
-	// error is shown once per distinct set of missing tools.
+	// Kernel view always shows the result; the notification is shown once
+	// per distinct set of missing tools, unless turned off.
+	const NOTIFY_KEY = 'kernelDev.toolNotifications';
 	let lastShown = '';
 	/** @param {boolean} [always] show the result even if unchanged / all present */
 	const checkTools = async always => {
 		const missing = tools.missing(s);
 		const text = tools.describe(missing);
 		const cmd = tools.installCommand(missing);
-		panel.setTools(text, cmd);
+		kernelView.setTools(text, cmd, missing.map(r => r.pkg ? `${r.what} (${r.pkg})` : r.hint ? `${r.what}: ${r.hint}` : r.what));
 		if (!missing.length) {
 			lastShown = '';
 			if (always)
 				vscode.window.showInformationMessage(`Kernel: all tools for ${s.arch} are installed.`);
 			return;
 		}
-		if (!always && text === lastShown)
+		if (!always && (text === lastShown || context.globalState.get(NOTIFY_KEY) === false))
 			return;
 		lastShown = text;
-		const buttons = cmd ? ['Run Install Command', 'Copy Command'] : [];
-		if (missing.some(r => r.what.startsWith('initramfs ')))
-			buttons.push('Open Kernel Panel');
-		const pick = await vscode.window.showErrorMessage(
-			`Kernel: missing tools for ${s.arch}, ${describe(s)}: ${text}.` + (cmd ? ` Install with: ${cmd}` : ''), ...buttons);
+		const buttons = cmd ? ['Run Install Command', 'Copy Command'] : ['Show in Kernel View'];
+		if (!always)
+			buttons.push("Don't Show Again");
+		const pick = await vscode.window.showWarningMessage(
+			`Kernel Workbench: missing tools for ${s.arch} (${describe(s)}): ${text}.` + (cmd ? ` Install with: ${cmd}` : ''), ...buttons);
 		if (pick === 'Run Install Command')
 			runInstall(cmd);
 		else if (pick === 'Copy Command')
 			await vscode.env.clipboard.writeText(cmd);
-		else if (pick === 'Open Kernel Panel')
-			await vscode.commands.executeCommand('workbench.view.extension.kernelDev');
+		else if (pick === 'Show in Kernel View')
+			await vscode.commands.executeCommand('kernelDev.kernel.focus');
+		else if (pick === "Don't Show Again")
+			await context.globalState.update(NOTIFY_KEY, false);
 	};
 	/** @param {string} cmd */
 	const runInstall = cmd => {
@@ -111,10 +113,6 @@ function activate(context) {
 		['kernelDev.selectVariant', reselect(() => pickVariant(s))],
 		['kernelDev.selectConfig', () => pickConfig(s)],
 		['kernelDev.followSelection', () => followSelection(s.root, s.configured())],
-		// One command per choice, for the checkmarked menu in the editor toolbar.
-		...Object.keys(ARCHES).map(a => /** @type {[string, () => any]} */ ([`kernelDev.arch.${a}`, reselect(() => s.select('arch', a))])),
-		['kernelDev.variant.debug', reselect(() => s.select('variant', 'debug'))],
-		['kernelDev.variant.release', reselect(() => s.select('variant', 'release'))],
 		['kernelDev.configure', () => kbuild.configure()],
 		['kernelDev.build', () => kbuild.build()],
 		['kernelDev.rebuild', async () => (await kbuild.clean()) === 0 && kbuild.build()],
@@ -140,6 +138,10 @@ function activate(context) {
 	];
 	for (const [id, fn] of commands)
 		context.subscriptions.push(vscode.commands.registerCommand(id, fn));
+
+	// The extension's parts, for the integration tests; not a public API.
+	return { settings: s, kbuild, runner, oops, kernelView, series: seriesParts, kunit, apply: applyParts,
+		blame: blameParts, history, bisect: bisectParts, checkTools };
 }
 
 /** "gcc" / "llvm", "qemu" / "virtme" @param {import('./src/settings').Settings} s */

@@ -6,7 +6,6 @@ const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
 const { git, gitStatus, exists } = require('./git');
-const { page } = require('./webview');
 
 /**
  * A series fetched (or loaded) and ready for git am.
@@ -279,152 +278,149 @@ function run(cmd, args, cwd) {
 	});
 }
 
-/**
- * The Apply view in the Kernel Git tab.
- * @implements {vscode.WebviewViewProvider}
- */
-class ApplyView {
-	/** @param {Apply} apply */
-	constructor(apply) {
-		this.apply = apply;
-		/** @type {vscode.WebviewView | undefined} */
-		this.view = undefined;
-		apply.onDidChange(() => this.push());
-	}
-
-	/** @param {vscode.WebviewView} view */
-	resolveWebviewView(view) {
-		this.view = view;
-		view.webview.options = { enableScripts: true };
-		view.webview.html = html();
-		view.webview.onDidReceiveMessage(m => this.onMessage(m));
-		view.onDidChangeVisibility(() => view.visible && this.apply.refreshState());
-		this.apply.refreshState();
-	}
-
-	/** @param {any} m */
-	async onMessage(m) {
-		const a = this.apply;
-		if (m.type === 'ready')
-			return this.push();
-		if (m.type === 'fetch')
-			return a.fetch(m.input, { link: m.link, signoff: m.signoff });
-		if (m.type !== 'command')
-			return;
-		switch (m.command) {
-		case 'openFiles': return a.openFiles();
-		case 'applyCurrent': return a.apply('current');
-		case 'applyNew': return a.apply('newBranch');
-		case 'continue': case 'skip': case 'abort': return a.resolve(m.command);
-		case 'openMbox': return a.fetched && vscode.window.showTextDocument(vscode.Uri.file(a.fetched.mbox), { preview: true });
-		case 'openLink': return a.fetched?.link && vscode.env.openExternal(vscode.Uri.parse(a.fetched.link));
-		case 'showLog': {
-			if (!a.fetched)
-				return;
-			const doc = await vscode.workspace.openTextDocument({ content: a.fetched.log, language: 'plaintext' });
-			return vscode.window.showTextDocument(doc, { preview: true });
-		}
-		}
-	}
-
-	push() {
-		if (!this.view?.visible)
-			return;
-		const a = this.apply;
-		this.view.webview.postMessage({ type: 'state', fetched: a.fetched && { ...a.fetched, log: undefined }, am: a.am, busy: a.busy, message: a.message });
+class Item extends vscode.TreeItem {
+	/**
+	 * @param {string} label
+	 * @param {{ description?: string, icon?: string, color?: string, tooltip?: string | vscode.MarkdownString,
+	 *           contextValue?: string, children?: Item[], collapsed?: boolean, command?: vscode.Command,
+	 *           option?: import('./kernelView').OptionSpec }} [o]
+	 */
+	constructor(label, o = {}) {
+		super(label, o.children ? (o.collapsed ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.Expanded)
+			: vscode.TreeItemCollapsibleState.None);
+		this.description = o.description;
+		if (o.icon)
+			this.iconPath = new vscode.ThemeIcon(o.icon, o.color ? new vscode.ThemeColor(o.color) : undefined);
+		this.tooltip = o.tooltip;
+		this.contextValue = o.contextValue;
+		this.children = o.children;
+		this.option = o.option;
+		if (o.command)
+			this.command = o.command;
 	}
 }
 
-function html() {
-	return page(`
-	<h3>Fetch from lore</h3>
-	<label for="input">lore link or Message-ID</label>
-	<div class="row"><input id="input" placeholder="https://lore.kernel.org/r/… or 2026…@kernel.org"><button class="fit" id="fetch">Fetch</button></div>
-	<label class="check"><input type="checkbox" id="link" checked> Add Link: trailers</label>
-	<label class="check"><input type="checkbox" id="signoff"> Add my Signed-off-by</label>
-	<div class="tools"><button class="secondary" data-cmd="openFiles">Open mbox / patch files…</button></div>
-	<p id="busy" class="busy"></p>
+/**
+ * The Apply view in the Kernel Git tab: the fetched series, and a git am
+ * in progress.
+ * @implements {vscode.TreeDataProvider<Item>}
+ */
+class ApplyTree {
+	/** @param {Apply} apply @param {import('./settings').Settings} s */
+	constructor(apply, s) {
+		this.apply = apply;
+		this.s = s;
+		this._onDidChangeTreeData = new vscode.EventEmitter();
+		this.onDidChangeTreeData = this._onDidChangeTreeData.event;
+		apply.onDidChange(() => this.refresh());
+		s.onDidChange(() => this.refresh());
+	}
 
-	<div id="seriesBox">
-		<h3>Series</h3>
-		<p id="title"></p>
-		<ul id="patches" class="list"></ul>
-		<dl class="status">
-			<dt>Base</dt><dd id="base"></dd>
-			<dt>Trailers</dt><dd id="trailers"></dd>
-		</dl>
-		<div class="tools">
-			<button class="secondary" data-cmd="openMbox">Open mbox</button>
-			<button class="secondary" data-cmd="showLog" id="logBtn">b4 output</button>
-			<button class="secondary" data-cmd="openLink" id="linkBtn">Open on lore</button>
-		</div>
-		<div class="steps">
-			<button data-cmd="applyCurrent" title="git am -3 on the current branch">Apply to current branch</button>
-			<button data-cmd="applyNew" title="git checkout -b at the series' base, then git am -3">Apply on new branch</button>
-		</div>
-	</div>
+	refresh() {
+		const a = this.apply;
+		vscode.commands.executeCommand('setContext', 'kernelDev.applyFetched', !!a.fetched);
+		vscode.commands.executeCommand('setContext', 'kernelDev.amInProgress', !!a.am);
+		vscode.commands.executeCommand('setContext', 'kernelDev.applyEmpty', !a.fetched && !a.am && !a.busy && !a.message);
+		this._onDidChangeTreeData.fire(undefined);
+	}
 
-	<div id="amBox">
-		<h3>git am in progress</h3>
-		<p id="amState" class="warn"></p>
-		<ul id="conflicts" class="list"></ul>
-		<div class="tools">
-			<button data-cmd="continue" title="Stage the resolved files and git am --continue">Continue</button>
-			<button class="secondary" data-cmd="skip">Skip patch</button>
-			<button class="secondary" data-cmd="abort">Abort</button>
-		</div>
-	</div>
-	<p id="message"></p>
-`, `
-	const fetch = () => vscode.postMessage({ type: 'fetch', input: $('input').value, link: $('link').checked, signoff: $('signoff').checked });
-	$('fetch').addEventListener('click', fetch);
-	$('input').addEventListener('keydown', e => { if (e.key === 'Enter') fetch(); });
-	window.addEventListener('message', ({ data: st }) => {
-		if (st.type !== 'state') return;
-		$('busy').textContent = st.busy ? st.busy + '…' : '';
-		$('fetch').disabled = !!st.busy;
-		const f = st.fetched;
-		$('seriesBox').style.display = f ? '' : 'none';
+	/** @param {Item} item */
+	getTreeItem(item) {
+		return item;
+	}
+
+	/** @param {Item} [item] */
+	getChildren(item) {
+		if (item)
+			return item.children || [];
+		const a = this.apply;
+		/** @type {Item[]} */
+		const items = [];
+		if (a.busy)
+			items.push(new Item(a.busy, { icon: 'loading~spin' }));
+		if (a.am) {
+			items.push(new Item(`git am stopped at patch ${a.am.next}/${a.am.last}`, {
+				description: a.am.subject, icon: 'warning', color: 'problemsWarningIcon.foreground',
+				tooltip: 'Resolve the conflicts, then Continue; or Skip this patch, or Abort.',
+				children: a.am.conflicts.length
+					? a.am.conflicts.map(f => new Item(f, { icon: 'diff', command: { command: 'vscode.open', title: 'Open',
+						arguments: [vscode.Uri.file(path.join(a.root, f))] } }))
+					: [new Item('No conflicted files: the patch did not apply at all. Skip it or abort.', { icon: 'info' })],
+			}));
+		}
+		const f = a.fetched;
 		if (f) {
-			$('title').textContent = f.title;
-			$('patches').innerHTML = f.patches.map(p => '<li><span class="grow">' + esc(p) + '</span></li>').join('');
-			$('base').textContent = f.baseNote;
-			$('trailers').textContent = f.trailers.length ? f.trailers.length + ' collected from replies' : 'none collected';
-			$('trailers').title = f.trailers.join('\\n');
-			$('linkBtn').style.display = f.link ? '' : 'none';
+			items.push(new Item(f.title.replace(/^\[[^\]]*\]\s*/, ''), {
+				description: /^\[([^\]]*)\]/.exec(f.title)?.[1] || '',
+				icon: 'git-pull-request', tooltip: `${f.title}\n${f.source}`,
+				children: f.patches.map(p => new Item(p.replace(/^\[[^\]]*\]\s*/, ''), { icon: 'git-commit', description: /^\[[^\]]*?(\d+\/\d+)\]/.exec(p)?.[1] || '' })),
+			}));
+			items.push(new Item('Base', { description: f.baseNote, icon: 'git-branch', tooltip: f.baseNote }));
+			items.push(new Item('Trailers collected', {
+				description: String(f.trailers.length), icon: 'tag',
+				children: f.trailers.map(t => new Item(t, { icon: 'person' })), collapsed: true,
+			}));
+			items.push(new Item('mbox', { description: path.basename(f.mbox), icon: 'file',
+				command: { command: 'vscode.open', title: 'Open', arguments: [vscode.Uri.file(f.mbox)] } }));
 		}
-		$('amBox').style.display = st.am ? '' : 'none';
-		document.querySelectorAll('.steps button').forEach(b => b.disabled = !!st.busy || !!st.am);
-		if (st.am) {
-			$('amState').textContent = 'Stopped at patch ' + st.am.next + '/' + st.am.last + ': ' + st.am.subject;
-			$('conflicts').innerHTML = st.am.conflicts.length
-				? st.am.conflicts.map(c => '<li><span class="grow mono">' + esc(c) + '</span></li>').join('')
-				: '<li>No conflicted files: the patch did not apply at all. Skip it, or abort.</li>';
+		if (a.message)
+			items.push(new Item(a.message, { icon: /fail|error|not installed/i.test(a.message) ? 'error' : 'info', tooltip: a.message }));
+		if (items.length) {
+			/** @type {import('./kernelView').OptionSpec[]} */
+			const specs = [
+				{ key: 'apply.addLink', label: 'Add Link: trailers', kind: 'bool' },
+				{ key: 'apply.addSignoff', label: 'Add my Signed-off-by', kind: 'bool' },
+			];
+			items.push(new Item('Fetch options', {
+				icon: 'settings', collapsed: true,
+				children: specs.map(o => new Item(o.label, { description: this.s.get(o.key, o.key === 'apply.addLink') ? 'on' : 'off',
+					contextValue: 'edit', option: o, tooltip: `kernelDev.${o.key}` })),
+			}));
 		}
-		$('message').textContent = st.message;
-	});
-	vscode.postMessage({ type: 'ready' });
-`);
+		return items;
+	}
 }
 
 /**
  * @param {vscode.ExtensionContext} context
- * @param {string} root
+ * @param {import('./settings').Settings} s
  */
-function registerApply(context, root) {
-	const apply = new Apply(context, root);
-	const view = new ApplyView(apply);
-	context.subscriptions.push(
-		vscode.window.registerWebviewViewProvider('kernelDev.apply', view, { webviewOptions: { retainContextWhenHidden: true } }),
-		vscode.commands.registerCommand('kernelDev.apply.fetch', async () => {
-			const input = await vscode.window.showInputBox({ title: 'Fetch a series from lore', prompt: 'lore link or Message-ID' });
-			if (input)
-				await apply.fetch(input);
-			await vscode.commands.executeCommand('kernelDev.apply.focus');
-		}),
-		vscode.commands.registerCommand('kernelDev.apply.openFiles', () => apply.openFiles()),
-	);
-	return { apply, view };
+function registerApply(context, s) {
+	const apply = new Apply(context, s.root);
+	const tree = new ApplyTree(apply, s);
+	const fetch = async () => {
+		const input = await vscode.window.showInputBox({ title: 'Fetch a series from lore', prompt: 'lore link or Message-ID',
+			placeHolder: 'https://lore.kernel.org/r/… or 20260917233222.2542500-2-memxor@gmail.com' });
+		if (!input)
+			return;
+		await vscode.commands.executeCommand('kernelDev.apply.focus');
+		await apply.fetch(input, { link: s.get('apply.addLink', true), signoff: s.get('apply.addSignoff', false) });
+	};
+	/** @type {[string, (...args: any[]) => any][]} */
+	const commands = [
+		['kernelDev.apply.fetch', fetch],
+		['kernelDev.apply.openFiles', () => apply.openFiles()],
+		['kernelDev.apply.applyCurrent', () => apply.apply('current')],
+		['kernelDev.apply.applyNewBranch', () => apply.apply('newBranch')],
+		['kernelDev.apply.continue', () => apply.resolve('continue')],
+		['kernelDev.apply.skip', () => apply.resolve('skip')],
+		['kernelDev.apply.abort', () => apply.resolve('abort')],
+		['kernelDev.apply.showLog', async () => {
+			if (!apply.fetched)
+				return;
+			const doc = await vscode.workspace.openTextDocument({ content: apply.fetched.log, language: 'plaintext' });
+			await vscode.window.showTextDocument(doc, { preview: true });
+		}],
+		['kernelDev.apply.openLink', () => apply.fetched?.link && vscode.env.openExternal(vscode.Uri.parse(apply.fetched.link))],
+		['kernelDev.apply.clear', () => { apply.fetched = undefined; apply.message = ''; apply.changed(); }],
+	];
+	const view = vscode.window.createTreeView('kernelDev.apply', { treeDataProvider: tree });
+	for (const [id, fn] of commands)
+		context.subscriptions.push(vscode.commands.registerCommand(id, fn));
+	context.subscriptions.push(view, view.onDidChangeVisibility(() => view.visible && apply.refreshState()));
+	apply.refreshState();
+	tree.refresh();
+	return { apply, view: tree };
 }
 
-module.exports = { Apply, ApplyView, registerApply, messageId, mboxSubjects, parseB4, html };
+module.exports = { Apply, ApplyTree, registerApply, messageId, mboxSubjects, parseB4 };

@@ -9,7 +9,6 @@ const { git, gitStatus, log, exists } = require('./git');
 const { openCommit } = require('./commits');
 const checkpatch = require('./checkpatch');
 const { runTask, sq } = require('./tasks');
-const { page } = require('./webview');
 const { Patches } = require('./patches');
 const { Sender } = require('./send');
 
@@ -299,222 +298,197 @@ function summary(r) {
 	return { text: parts.join(', ') || 'clean', cls: r.errors ? 'error' : r.warnings || r.checks ? 'warn' : 'ok' };
 }
 
+class Item extends vscode.TreeItem {
+	/**
+	 * @param {string} label
+	 * @param {{ description?: string, icon?: string, color?: string, tooltip?: string | vscode.MarkdownString,
+	 *           contextValue?: string, children?: Item[], collapsed?: boolean, command?: vscode.Command, id?: string,
+	 *           option?: import('./kernelView').OptionSpec }} [o]
+	 */
+	constructor(label, o = {}) {
+		super(label, o.children ? (o.collapsed ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.Expanded)
+			: vscode.TreeItemCollapsibleState.None);
+		this.description = o.description;
+		if (o.icon)
+			this.iconPath = new vscode.ThemeIcon(o.icon, o.color ? new vscode.ThemeColor(o.color) : undefined);
+		this.tooltip = o.tooltip;
+		this.contextValue = o.contextValue;
+		this.children = o.children;
+		if (o.command)
+			this.command = o.command;
+		/** @type {string | undefined} commit hash, 'working', or a file path */
+		this.ref = o.id;
+		this.option = o.option;
+	}
+}
+
+/** Icon and color for a checkpatch result. @param {Report | undefined | null} r */
+function statusIcon(r) {
+	if (!r)
+		return { icon: 'git-commit', color: undefined };
+	if (r.errors)
+		return { icon: 'error', color: 'problemsErrorIcon.foreground' };
+	if (r.warnings || r.checks)
+		return { icon: 'warning', color: 'problemsWarningIcon.foreground' };
+	return { icon: 'pass', color: 'testing.iconPassed' };
+}
+
 /**
- * The Series view in the Kernel Git tab.
- * @implements {vscode.WebviewViewProvider}
+ * The Series view in the Kernel Git tab: the branch's commits over its
+ * base with their checkpatch results, and what Generate patches will use.
+ * @implements {vscode.TreeDataProvider<Item>}
  */
-class SeriesView {
+class SeriesTree {
 	/** @param {Series} series @param {Patches} patches @param {Sender} sender */
 	constructor(series, patches, sender) {
 		this.series = series;
 		this.patches = patches;
 		this.sender = sender;
-		/** @type {vscode.WebviewView | undefined} */
+		this.cover = '';
+		/** @type {vscode.TreeView<Item> | undefined} */
 		this.view = undefined;
-		series.onDidChange(() => this.push());
+		this._onDidChangeTreeData = new vscode.EventEmitter();
+		this.onDidChangeTreeData = this._onDidChangeTreeData.event;
+		series.onDidChange(() => this.refresh());
+		series.s.onDidChange(() => this.refresh());
 	}
 
-	/** @param {vscode.WebviewView} view */
-	resolveWebviewView(view) {
-		this.view = view;
-		view.webview.options = { enableScripts: true };
-		view.webview.html = html();
-		view.webview.onDidReceiveMessage(m => this.onMessage(m));
-		view.onDidChangeVisibility(() => view.visible && this.series.refresh());
-		this.series.refresh();
-	}
-
-	/** @param {any} m */
-	async onMessage(m) {
+	async refresh() {
 		const se = this.series;
-		if (m.type === 'ready')
-			return this.push();
-		if (m.type === 'series-option') {
-			const value = m.key === 'prefix' ? String(m.value).trim() || 'PATCH'
-				: String(m.value).split('\n').map(a => a.trim()).filter(Boolean);
-			return this.patches.set(m.key, value);
+		this.cover = await this.patches.cover();
+		if (!this.sender.smtp)
+			await this.sender.checkConfig();
+		vscode.commands.executeCommand('setContext', 'kernelDev.seriesNoBase', !se.info.mergeBase);
+		vscode.commands.executeCommand('setContext', 'kernelDev.seriesBusy', !!se.busy);
+		vscode.commands.executeCommand('setContext', 'kernelDev.patchesGenerated', !!this.patches.output);
+		vscode.commands.executeCommand('setContext', 'kernelDev.dryRunOk', this.sender.dryRunCurrent());
+		if (this.view) {
+			this.view.description = se.info.mergeBase ? `${se.info.branch || 'detached HEAD'} · v${se.version}` : '';
+			this.view.message = se.info.mergeBase && se.info.error ? se.info.error : undefined;
 		}
-		if (m.type === 'option') {
-			const cfg = vscode.workspace.getConfiguration('kernelDev', this.series.s.folder.uri);
-			const value = m.key === 'checkpatch.ignore' ? String(m.value).split(/[\s,]+/).filter(Boolean) : m.value;
-			return cfg.update(m.key, value, vscode.ConfigurationTarget.Global).then(() => this.push());
-		}
-		if (m.type !== 'command')
-			return;
-		switch (m.command) {
-		case 'refresh': return se.refresh();
-		case 'pickBase': return se.pickBase();
-		case 'versionUp': return se.setVersion(se.version + 1);
-		case 'versionDown': return se.setVersion(se.version - 1);
-		case 'checkWorking': return se.checkWorking();
-		case 'checkSeries': return se.checkSeries();
-		case 'format': return se.formatChanged();
-		case 'openCommit': return openCommit(se.root, m.arg);
-		case 'report': return se.showReport(m.arg);
-		case 'editCover': return this.patches.editCover();
-		case 'fillRecipients': return se.withBusy('get_maintainer.pl', () => this.patches.fillRecipients());
-		case 'generate': return this.patches.generate();
-		case 'dryRun': return se.withBusy('git send-email --dry-run', () => this.sender.dryRun());
-		case 'send': return this.sender.send();
-		case 'openPatch': return this.patches.output && vscode.window.showTextDocument(vscode.Uri.file(path.join(this.patches.output.dir, m.arg)), { preview: true });
-		case 'revealOutput': return this.patches.output && vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(path.join(this.patches.output.dir, this.patches.output.files[0])));
-		default: return vscode.commands.executeCommand(m.command);
-		}
+		this._onDidChangeTreeData.fire(undefined);
 	}
 
-	async push() {
-		if (!this.view?.visible)
-			return;
+	/** @param {Item} item */
+	getTreeItem(item) {
+		return item;
+	}
+
+	/** @param {Item} [item] */
+	getChildren(item) {
+		if (item)
+			return item.children || [];
 		const se = this.series;
-		const pa = this.patches;
-		const cover = await pa.cover();
-		const cfg = vscode.workspace.getConfiguration('kernelDev', this.series.s.folder.uri);
-		this.view.webview.postMessage({
-			type: 'state',
-			branch: se.info.branch || '(detached HEAD)',
-			base: se.info.base || '',
-			mergeBase: se.info.mergeBase ? se.info.mergeBase.slice(0, 12) : '',
-			error: se.info.error || '',
-			version: se.version,
-			busy: se.busy,
-			lastBuild: se.lastBuild,
-			working: summary(se.working),
-			commits: se.info.commits.map(c => {
+		if (!se.info.mergeBase)
+			return []; // welcome view: pick a base
+		/** @type {Item[]} */
+		const items = [];
+		if (se.busy)
+			items.push(new Item(se.busy, { icon: 'loading~spin' }));
+		items.push(
+			new Item('Base', { description: `${se.info.base} (${se.info.mergeBase.slice(0, 12)})`, icon: 'git-branch', contextValue: 'base' }),
+			new Item('Version', { description: `v${se.version}`, icon: 'versions', contextValue: 'version' }),
+		);
+		const n = se.info.commits.length;
+		items.push(new Item('Commits', {
+			description: String(n),
+			icon: 'git-commit',
+			children: n ? se.info.commits.map((c, i) => {
 				const r = se.reports.get(c.hash);
-				return {
-					hash: c.hash, short: c.short, subject: c.subject, status: summary(r),
-					checked: !!r,
-					notes: r ? r.findings.filter(f => !f.file).map(f => `${f.level}: ${f.message}`) : [],
-				};
+				const st = statusIcon(r);
+				const notes = r ? r.findings.filter(f => !f.file).map(f => `- ${f.level}: ${f.message}`) : [];
+				const tip = new vscode.MarkdownString(`**${md(c.subject)}**\n\n\`${c.short}\` · ${md(c.author)}\n\n` +
+					(r ? `checkpatch: ${summary(r).text}${notes.length ? `\n\n${notes.map(md).join('\n')}` : ''}` : 'Not checked yet.'));
+				return new Item(c.subject, {
+					description: `${i + 1}/${n}${r ? ` · ${summary(r).text}` : ''}`,
+					icon: st.icon, color: st.color, tooltip: tip, id: c.hash,
+					contextValue: r ? 'commitChecked' : 'commit',
+					command: { command: 'kernelDev.git.openCommit', title: 'Open Commit', arguments: [c.hash] },
+				});
+			}) : [new Item('No commits on top of the base.', { icon: 'info' })],
+		}));
+		const w = summary(se.working);
+		items.push(new Item('Working changes', {
+			description: w.text, icon: se.working ? statusIcon(se.working).icon : 'edit',
+			color: se.working ? statusIcon(se.working).color : undefined,
+			id: 'working', contextValue: se.working ? 'workingChecked' : 'working',
+		}));
+		if (se.lastBuild)
+			items.push(new Item('Build checks', { description: se.lastBuild, tooltip: se.lastBuild, icon: 'tools' }));
+		items.push(this.optionsGroup(), this.patchesGroup());
+		return items;
+	}
+
+	/** What Check series runs; edited like the Kernel view's options. */
+	optionsGroup() {
+		const s = this.series.s;
+		/** @type {import('./kernelView').OptionSpec[]} */
+		const specs = [
+			{ key: 'checkpatch.strict', label: 'checkpatch --strict', kind: 'bool' },
+			{ key: 'checkpatch.ignore', label: 'checkpatch: ignored types', kind: 'words', placeholder: 'FILE_PATH_CHANGES LINUX_VERSION_CODE' },
+			{ key: 'check.sparse', label: 'sparse (C=2)', kind: 'bool' },
+			{ key: 'check.coccinelle', label: 'Coccinelle', kind: 'bool' },
+		];
+		return new Item('Check options', {
+			icon: 'settings', collapsed: true,
+			children: specs.map(o => {
+				const v = s.get(o.key, /** @type {any} */ (undefined));
+				return new Item(o.label, {
+					description: o.kind === 'bool' ? (v ? 'on' : 'off') : (v || []).join(' ') || 'none',
+					tooltip: `kernelDev.${o.key}`, contextValue: 'edit', option: o,
+				});
 			}),
-			prefix: pa.prefix,
-			to: pa.to.join('\n'),
-			cc: pa.cc.join('\n'),
-			coverSubject: cover ? cover.split('\n')[0] : '',
-			multi: se.info.commits.length > 1,
-			outputDir: path.relative(se.root, pa.outputDir()),
-			output: pa.output ? { dir: path.relative(se.root, pa.output.dir), files: pa.output.files } : undefined,
-			smtp: this.sender.smtp || await this.sender.checkConfig(),
-			dry: this.sender.dry ? { ok: this.sender.dry.ok, mails: this.sender.dry.mails.length, current: this.sender.dryRunCurrent() } : undefined,
-			options: {
-				'checkpatch.strict': cfg.get('checkpatch.strict', false),
-				'checkpatch.ignore': /** @type {string[]} */ (cfg.get('checkpatch.ignore', [])).join(' '),
-				'check.sparse': cfg.get('check.sparse', false),
-				'check.coccinelle': cfg.get('check.coccinelle', false),
-			},
 		});
+	}
+
+	patchesGroup() {
+		const pa = this.patches;
+		const se = this.series;
+		/** @type {Item[]} */
+		const children = [
+			new Item('Subject prefix', { description: `[${pa.prefix}]`, icon: 'symbol-string', contextValue: 'prefix' }),
+		];
+		if (se.info.commits.length > 1)
+			children.push(new Item('Cover letter', {
+				description: this.cover ? this.cover.split('\n')[0] : 'not written yet',
+				icon: this.cover ? 'mail' : 'warning', color: this.cover ? undefined : 'problemsWarningIcon.foreground',
+				contextValue: 'cover', tooltip: this.cover || 'Stored as the git branch description; git format-patch uses it.',
+			}));
+		const addresses = (/** @type {string[]} */ list) => list.map(a => new Item(a, { icon: 'person' }));
+		children.push(
+			new Item('To', { description: String(pa.to.length), icon: 'mail', contextValue: 'recipients',
+				children: addresses(pa.to), collapsed: true }),
+			new Item('Cc', { description: String(pa.cc.length), icon: 'mail', contextValue: 'recipients',
+				children: addresses(pa.cc), collapsed: true }),
+		);
+		if (pa.output) {
+			const dir = pa.output.dir;
+			const dry = this.sender.dry;
+			children.push(new Item('Generated', {
+				description: path.relative(se.root, dir),
+				icon: 'package', contextValue: 'generated',
+				children: pa.output.files.map(f => new Item(f, {
+					icon: 'mail', id: path.join(dir, f),
+					command: { command: 'vscode.open', title: 'Open', arguments: [vscode.Uri.file(path.join(dir, f))] },
+				})),
+			}));
+			children.push(new Item('Dry run', {
+				description: !dry ? 'not run' : !dry.ok ? 'failed' : this.sender.dryRunCurrent() ? `OK, ${dry.mails.length} mails` : 'outdated: the files changed',
+				icon: dry?.ok && this.sender.dryRunCurrent() ? 'pass' : dry ? 'warning' : 'circle-large-outline',
+				tooltip: `SMTP: ${this.sender.smtp}`,
+			}));
+		}
+		return new Item('Patches', { icon: 'git-pull-request', children });
 	}
 }
 
-function html() {
-	return page(`
-	<h3>Series</h3>
-	<dl class="status">
-		<dt>Branch</dt><dd id="branch"></dd>
-		<dt>Base</dt><dd><span id="base"></span> <a data-cmd="pickBase">change…</a></dd>
-		<dt>Version</dt><dd><span id="version" class="mono"></span>
-			<a data-cmd="versionDown" title="Previous version">−</a> <a data-cmd="versionUp" title="Next version">+</a></dd>
-	</dl>
-	<p id="error" class="error"></p>
-	<ul id="commits" class="list"></ul>
-	<div class="tools"><button class="secondary" data-cmd="refresh">Refresh</button></div>
-
-	<h3>Checks</h3>
-	<div class="steps">
-		<button data-cmd="checkWorking" title="checkpatch on uncommitted changes">Check working changes</button>
-		<button data-cmd="checkSeries" title="checkpatch on every commit, then W=1 on the touched C files">Check series</button>
-	</div>
-	<dl class="status">
-		<dt>Now</dt><dd id="busy"></dd>
-		<dt>Working</dt><dd><a id="working" data-cmd="report" data-arg="working"></a></dd>
-		<dt>Build</dt><dd id="lastBuild"></dd>
-	</dl>
-	<label class="check"><input type="checkbox" id="strict" data-opt="checkpatch.strict"> checkpatch --strict</label>
-	<label for="ignore">checkpatch: ignore types</label>
-	<input id="ignore" data-opt="checkpatch.ignore" placeholder="e.g. LINUX_VERSION_CODE FILE_PATH_CHANGES">
-	<label class="check"><input type="checkbox" id="sparse" data-opt="check.sparse"> sparse (C=2)</label>
-	<label class="check"><input type="checkbox" id="cocci" data-opt="check.coccinelle"> Coccinelle (coccicheck)</label>
-	<div class="tools"><button class="secondary" data-cmd="format" title="git clang-format against the base: only changed lines">Format changed lines</button></div>
-	<p class="hint">Findings are in the Problems panel. W=1 uses the build configured in the Kernel tab.</p>
-
-	<h3>Patches</h3>
-	<label for="prefix">Subject prefix</label>
-	<input id="prefix" data-sopt="prefix" placeholder="PATCH, PATCH net-next, RFC PATCH">
-	<div id="coverRow">
-		<label>Cover letter</label>
-		<div class="row"><span id="coverSubject" class="grow"></span><button class="secondary fit" data-cmd="editCover">Edit…</button></div>
-	</div>
-	<label for="to">To</label>
-	<textarea id="to" data-sopt="to" placeholder="one address per line"></textarea>
-	<label for="cc">Cc</label>
-	<textarea id="cc" data-sopt="cc" placeholder="one address per line"></textarea>
-	<div class="tools"><button class="secondary" data-cmd="fillRecipients" title="scripts/get_maintainer.pl: maintainers and reviewers to To, lists to Cc">Fill from get_maintainer.pl</button></div>
-	<div class="steps" style="grid-template-columns: 1fr">
-		<button data-cmd="generate" id="generate">Generate patches</button>
-	</div>
-	<p class="hint">Into <span id="outputDir" class="mono"></span>. Blocked while checkpatch reports errors, unless you choose to generate anyway.</p>
-	<div id="outputBox">
-		<label>Generated <a data-cmd="revealOutput">(open folder)</a></label>
-		<ul id="output" class="list"></ul>
-		<h3>Send</h3>
-		<dl class="status">
-			<dt>SMTP</dt><dd id="smtp"></dd>
-			<dt>Dry run</dt><dd id="dry"></dd>
-		</dl>
-		<div class="tools">
-			<button class="secondary" data-cmd="dryRun" title="git send-email --dry-run: shows every mail and its recipients, sends nothing">Dry run</button>
-			<button data-cmd="send" id="send" title="Enabled after a successful dry run of these exact files">Send…</button>
-		</div>
-		<p class="hint">Configure SMTP yourself, e.g. git config --global sendemail.smtpServer smtp.example.com (and smtpUser, smtpServerPort, smtpEncryption).</p>
-	</div>
-`, `
-	document.querySelectorAll('[data-sopt]').forEach(el => el.addEventListener('change', () =>
-		vscode.postMessage({ type: 'series-option', key: el.dataset.sopt, value: el.value })));
-	document.querySelectorAll('[data-opt]').forEach(el => el.addEventListener('change', () =>
-		vscode.postMessage({ type: 'option', key: el.dataset.opt, value: el.type === 'checkbox' ? el.checked : el.value })));
-	window.addEventListener('message', ({ data: st }) => {
-		if (st.type !== 'state') return;
-		$('branch').textContent = st.branch;
-		$('base').textContent = st.base ? st.base + (st.mergeBase ? ' (' + st.mergeBase + ')' : '') : 'none';
-		$('version').textContent = 'v' + st.version;
-		$('error').textContent = st.error;
-		$('busy').textContent = st.busy || 'idle';
-		$('busy').className = st.busy ? 'busy' : '';
-		$('working').textContent = st.working.text;
-		$('working').className = st.working.cls;
-		$('lastBuild').textContent = st.lastBuild || '—';
-		$('commits').innerHTML = st.commits.length ? st.commits.map((c, i) =>
-			'<li data-cmd="openCommit" data-arg="' + c.hash + '" title="' + esc(c.subject) + (c.notes.length ? '\\n\\n' + esc(c.notes.join('\\n')) : '') + '">' +
-			'<span class="mono">' + (i + 1) + '/' + st.commits.length + '</span>' +
-			'<span class="grow">' + esc(c.subject) + '</span>' +
-			(c.checked ? '<a class="' + c.status.cls + '" data-cmd="report" data-arg="' + c.hash + '">' + esc(c.status.text) + '</a>' : '') +
-			'</li>').join('') : '<li>No commits on top of the base.</li>';
-		document.querySelectorAll('.steps button').forEach(b => b.disabled = !!st.busy);
-		$('coverRow').style.display = st.multi ? '' : 'none';
-		$('coverSubject').textContent = st.coverSubject || 'not written yet';
-		$('coverSubject').className = 'grow' + (st.coverSubject ? '' : ' warn');
-		$('outputDir').textContent = st.outputDir;
-		$('outputBox').style.display = st.output ? '' : 'none';
-		if (st.output) $('output').innerHTML = st.output.files.map(f =>
-			'<li data-cmd="openPatch" data-arg="' + esc(f) + '"><span class="grow mono">' + esc(f) + '</span></li>').join('');
-		$('smtp').textContent = st.smtp;
-		$('dry').textContent = !st.dry ? 'not run' : !st.dry.ok ? 'failed (see its output)' : st.dry.current ? 'OK: ' + st.dry.mails + ' mails' : 'outdated: the patch files changed';
-		$('dry').className = st.dry && st.dry.ok && st.dry.current ? 'ok' : st.dry ? 'warn' : '';
-		$('send').disabled = !(st.dry && st.dry.ok && st.dry.current) || !!st.busy;
-		for (const [id, key] of [['prefix', 'prefix'], ['to', 'to'], ['cc', 'cc']])
-			if (document.activeElement !== $(id)) $(id).value = st[key];
-		for (const el of document.querySelectorAll('[data-opt]')) {
-			if (document.activeElement === el) continue;
-			if (el.type === 'checkbox') el.checked = !!st.options[el.dataset.opt];
-			else el.value = st.options[el.dataset.opt];
-		}
-	});
-	vscode.postMessage({ type: 'ready' });
-`);
+/** @param {string} s */
+function md(s) {
+	return s.replace(/[\\`*_{}[\]()#+\-.!<>|]/g, '\\$&');
 }
 
 /**
- * Register the Series view.
+ * Register the Series view and its commands.
  * @param {vscode.ExtensionContext} context
  * @param {Settings} s
  */
@@ -522,20 +496,35 @@ function registerSeries(context, s) {
 	const series = new Series(context, s);
 	const patches = new Patches(series);
 	const sender = new Sender(patches);
-	const view = new SeriesView(series, patches, sender);
-	context.subscriptions.push(
-		vscode.window.registerWebviewViewProvider('kernelDev.series', view, { webviewOptions: { retainContextWhenHidden: true } }),
-		series.problems.collection,
-		vscode.commands.registerCommand('kernelDev.series.checkWorking', () => series.checkWorking()),
-		vscode.commands.registerCommand('kernelDev.series.check', () => series.checkSeries()),
-		vscode.commands.registerCommand('kernelDev.series.format', () => series.formatChanged()),
-		vscode.commands.registerCommand('kernelDev.series.pickBase', () => series.pickBase()),
-		vscode.commands.registerCommand('kernelDev.series.editCover', () => patches.editCover()),
-		vscode.commands.registerCommand('kernelDev.series.generate', () => patches.generate()),
-		vscode.commands.registerCommand('kernelDev.series.dryRun', () => sender.dryRun()),
-		vscode.commands.registerCommand('kernelDev.series.send', () => sender.send()),
-	);
-	return { series, patches, sender, view };
+	const tree = new SeriesTree(series, patches, sender);
+	const view = vscode.window.createTreeView('kernelDev.series', { treeDataProvider: tree });
+	tree.view = view;
+	/** @type {[string, (...args: any[]) => any][]} */
+	const commands = [
+		['kernelDev.series.refresh', () => series.refresh()],
+		['kernelDev.series.checkWorking', () => series.checkWorking()],
+		['kernelDev.series.check', () => series.checkSeries()],
+		['kernelDev.series.format', () => series.formatChanged()],
+		['kernelDev.series.pickBase', () => series.pickBase()],
+		['kernelDev.series.nextVersion', () => series.setVersion(series.version + 1)],
+		['kernelDev.series.previousVersion', () => series.setVersion(series.version - 1)],
+		['kernelDev.series.editCover', () => patches.editCover()],
+		['kernelDev.series.editPrefix', () => patches.editPrefix()],
+		['kernelDev.series.editRecipients', () => patches.editRecipients()],
+		['kernelDev.series.fillRecipients', () => series.withBusy('get_maintainer.pl', () => patches.fillRecipients())],
+		['kernelDev.series.generate', () => patches.generate()],
+		['kernelDev.series.dryRun', () => series.withBusy('git send-email --dry-run', () => sender.dryRun())],
+		['kernelDev.series.send', () => sender.send()],
+		['kernelDev.series.report', (/** @type {Item} */ item) => item?.ref && series.showReport(item.ref)],
+		['kernelDev.series.revealOutput', () => patches.output && vscode.commands.executeCommand('revealFileInOS',
+			vscode.Uri.file(path.join(patches.output.dir, patches.output.files[0])))],
+	];
+	for (const [id, fn] of commands)
+		context.subscriptions.push(vscode.commands.registerCommand(id, fn));
+	context.subscriptions.push(view, series.problems.collection,
+		view.onDidChangeVisibility(() => view.visible && series.refresh()));
+	series.refresh();
+	return { series, patches, sender, view: tree };
 }
 
-module.exports = { Series, SeriesView, registerSeries, html, summary };
+module.exports = { Series, SeriesTree, registerSeries, summary, statusIcon };

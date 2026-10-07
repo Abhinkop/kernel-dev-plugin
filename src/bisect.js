@@ -7,7 +7,6 @@ const path = require('path');
 const { git, gitStatus, exists, fixesLine } = require('./git');
 const { openCommit } = require('./commits');
 const { runTask, sq } = require('./tasks');
-const { page } = require('./webview');
 
 /** @typedef {import('./settings').Settings} Settings */
 
@@ -143,126 +142,91 @@ class Bisect {
 	}
 }
 
-/**
- * The Bisect view in the Kernel Git tab.
- * @implements {vscode.WebviewViewProvider}
- */
-class BisectView {
-	/** @param {Bisect} bisect */
-	constructor(bisect) {
-		this.bisect = bisect;
-		/** @type {vscode.WebviewView | undefined} */
-		this.view = undefined;
-		bisect.onDidChange(() => this.push());
-	}
-
-	/** @param {vscode.WebviewView} view */
-	resolveWebviewView(view) {
-		this.view = view;
-		view.webview.options = { enableScripts: true };
-		view.webview.html = html();
-		view.webview.onDidReceiveMessage(m => this.onMessage(m));
-		view.onDidChangeVisibility(() => view.visible && this.bisect.refresh());
-		this.bisect.refresh();
-	}
-
-	/** @param {any} m */
-	async onMessage(m) {
-		const b = this.bisect;
-		if (m.type === 'ready')
-			return this.push();
-		if (m.type === 'start')
-			return b.start(m.bad.trim() || 'HEAD', m.good.trim());
-		if (m.type === 'run')
-			return b.run(m.script.trim());
-		if (m.type !== 'command')
-			return;
-		switch (m.command) {
-		case 'good': case 'bad': case 'skip': return b.step([m.command]);
-		case 'reset': return b.reset();
-		case 'build': return vscode.commands.executeCommand('kernelDev.build');
-		case 'boot': return vscode.commands.executeCommand('kernelDev.run');
-		case 'openCurrent': return b.current && openCommit(b.root, b.current.hash);
-		case 'openResult': return b.result && openCommit(b.root, b.result.hash);
-		case 'copyFixes': {
-			if (!b.result)
-				return;
-			const line = await fixesLine(b.root, b.result.hash);
-			await vscode.env.clipboard.writeText(line);
-			return vscode.window.showInformationMessage(`Copied: ${line}`);
-		}
-		}
-	}
-
-	push() {
-		if (!this.view?.visible)
-			return;
-		const b = this.bisect;
-		this.view.webview.postMessage({
-			type: 'state', active: b.active, current: b.current, remaining: b.remaining,
-			result: b.result, log: b.log, message: b.message, busy: b.busy,
-		});
+class Item extends vscode.TreeItem {
+	/**
+	 * @param {string} label
+	 * @param {{ description?: string, icon?: string, color?: string, tooltip?: string, contextValue?: string,
+	 *           children?: Item[], command?: vscode.Command }} [o]
+	 */
+	constructor(label, o = {}) {
+		super(label, o.children ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.None);
+		this.description = o.description;
+		if (o.icon)
+			this.iconPath = new vscode.ThemeIcon(o.icon, o.color ? new vscode.ThemeColor(o.color) : undefined);
+		this.tooltip = o.tooltip;
+		this.contextValue = o.contextValue;
+		this.children = o.children;
+		if (o.command)
+			this.command = o.command;
 	}
 }
 
-function html() {
-	return page(`
-	<div id="startBox">
-		<h3>Start</h3>
-		<label for="bad">Bad (has the bug)</label>
-		<input id="bad" placeholder="HEAD">
-		<label for="good">Good (works)</label>
-		<input id="good" placeholder="e.g. v6.12 or a commit">
-		<div class="steps" style="grid-template-columns: 1fr"><button id="start">Start bisect</button></div>
-	</div>
+/**
+ * The Bisect view in the Kernel Git tab.
+ * @implements {vscode.TreeDataProvider<Item>}
+ */
+class BisectTree {
+	/** @param {Bisect} bisect */
+	constructor(bisect) {
+		this.bisect = bisect;
+		this._onDidChangeTreeData = new vscode.EventEmitter();
+		this.onDidChangeTreeData = this._onDidChangeTreeData.event;
+		bisect.onDidChange(() => this.refresh());
+	}
 
-	<div id="stepBox">
-		<h3>Current step</h3>
-		<p><a data-cmd="openCurrent" id="current"></a></p>
-		<p id="remaining" class="hint"></p>
-		<div class="steps">
-			<button data-cmd="build" class="secondary">🔨 Build</button>
-			<button data-cmd="boot" class="secondary">▶ Boot</button>
-		</div>
-		<div class="steps" style="grid-template-columns: 1fr 1fr 1fr">
-			<button data-cmd="good">Good</button>
-			<button data-cmd="bad">Bad</button>
-			<button data-cmd="skip" class="secondary">Skip</button>
-		</div>
-		<h3>Automatic</h3>
-		<label for="script">Test script (gets the build directory; exit 0 = good, 1 = bad, 125 = skip)</label>
-		<div class="row"><input id="script" placeholder="path/to/test.sh"><button class="fit secondary" id="run">Run</button></div>
-		<p class="hint">Each step builds the kernel selected in the Kernel tab first; a build failure skips the commit.</p>
-		<h3>Log</h3>
-		<ul id="log" class="list"></ul>
-		<div class="tools"><button class="secondary" data-cmd="reset">Reset (end bisect)</button></div>
-	</div>
+	refresh() {
+		const b = this.bisect;
+		vscode.commands.executeCommand('setContext', 'kernelDev.bisectActive', b.active);
+		vscode.commands.executeCommand('setContext', 'kernelDev.bisectIdle', !b.active && !b.result && !b.busy && !b.message);
+		this._onDidChangeTreeData.fire(undefined);
+	}
 
-	<div id="resultBox">
-		<h3>Result</h3>
-		<p>First bad commit: <a data-cmd="openResult" id="result"></a></p>
-		<div class="tools"><button class="secondary" data-cmd="copyFixes">Copy Fixes: line</button></div>
-	</div>
-	<p id="busy" class="busy"></p>
-	<p id="message"></p>
-`, `
-	$('start').addEventListener('click', () => vscode.postMessage({ type: 'start', bad: $('bad').value, good: $('good').value }));
-	$('run').addEventListener('click', () => vscode.postMessage({ type: 'run', script: $('script').value }));
-	window.addEventListener('message', ({ data: st }) => {
-		if (st.type !== 'state') return;
-		$('startBox').style.display = st.active ? 'none' : '';
-		$('stepBox').style.display = st.active ? '' : 'none';
-		$('resultBox').style.display = st.result ? '' : 'none';
-		if (st.current) $('current').textContent = st.current.hash.slice(0, 12) + ' ' + st.current.subject;
-		$('remaining').textContent = st.remaining;
-		$('log').innerHTML = st.log.map(l => '<li><span class="grow">' + esc(l) + '</span></li>').join('');
-		if (st.result) $('result').textContent = st.result.hash.slice(0, 12) + ' ' + st.result.subject;
-		$('busy').textContent = st.busy ? st.busy + '…' : '';
-		$('message').textContent = st.message;
-		document.querySelectorAll('button').forEach(b => b.disabled = !!st.busy);
-	});
-	vscode.postMessage({ type: 'ready' });
-`);
+	/** @param {Item} item */
+	getTreeItem(item) {
+		return item;
+	}
+
+	/** @param {Item} [item] */
+	getChildren(item) {
+		if (item)
+			return item.children || [];
+		const b = this.bisect;
+		/** @type {Item[]} */
+		const items = [];
+		if (b.busy)
+			items.push(new Item(b.busy, { icon: 'loading~spin' }));
+		if (b.result)
+			items.push(new Item(b.result.subject, {
+				description: `first bad commit · ${b.result.hash.slice(0, 12)}`, icon: 'bug', color: 'problemsErrorIcon.foreground',
+				contextValue: 'result', tooltip: b.result.hash,
+				command: { command: 'kernelDev.git.openCommit', title: 'Open Commit', arguments: [b.result.hash] },
+			}));
+		if (b.active && b.current)
+			items.push(new Item(b.current.subject, {
+				description: `testing · ${b.current.hash.slice(0, 12)}`, icon: 'debug-breakpoint-unverified',
+				tooltip: b.remaining || b.current.hash,
+				command: { command: 'kernelDev.git.openCommit', title: 'Open Commit', arguments: [b.current.hash] },
+			}));
+		if (b.active && b.remaining)
+			items.push(new Item('Remaining', { description: b.remaining, icon: 'history' }));
+		if (b.log.length)
+			items.push(new Item('Steps', {
+				description: String(b.log.length), icon: 'list-ordered',
+				children: b.log.map(l => {
+					const m = /^(good|bad|skip|first bad commit): \[([0-9a-f]+)\] (.*)$/.exec(l);
+					const kind = m ? m[1] : '';
+					return new Item(m ? m[3] : l, {
+						description: m ? `${kind} · ${m[2].slice(0, 12)}` : '',
+						icon: kind === 'good' ? 'pass' : kind === 'bad' || kind === 'first bad commit' ? 'error' : 'debug-step-over',
+						color: kind === 'good' ? 'testing.iconPassed' : kind === 'bad' ? 'problemsErrorIcon.foreground' : undefined,
+						command: m ? { command: 'kernelDev.git.openCommit', title: 'Open Commit', arguments: [m[2]] } : undefined,
+					});
+				}),
+			}));
+		if (b.message && !b.result)
+			items.push(new Item(b.message, { icon: 'info', tooltip: b.message }));
+		return items;
+	}
 }
 
 /**
@@ -271,15 +235,47 @@ function html() {
  */
 function registerBisect(context, s) {
 	const bisect = new Bisect(context, s);
-	const view = new BisectView(bisect);
-	context.subscriptions.push(
-		vscode.window.registerWebviewViewProvider('kernelDev.bisect', view, { webviewOptions: { retainContextWhenHidden: true } }),
-		vscode.commands.registerCommand('kernelDev.bisect.good', () => bisect.step(['good'])),
-		vscode.commands.registerCommand('kernelDev.bisect.bad', () => bisect.step(['bad'])),
-		vscode.commands.registerCommand('kernelDev.bisect.skip', () => bisect.step(['skip'])),
-		vscode.commands.registerCommand('kernelDev.bisect.reset', () => bisect.reset()),
-	);
-	return { bisect, view };
+	const tree = new BisectTree(bisect);
+	/** Ask for the bad and good commits and start. */
+	const start = async () => {
+		const bad = await vscode.window.showInputBox({ title: 'Bisect: bad commit (has the bug)', value: 'HEAD' });
+		if (!bad)
+			return false;
+		const good = await vscode.window.showInputBox({ title: 'Bisect: good commit (works)', prompt: 'e.g. v6.12, or a commit hash' });
+		if (!good)
+			return false;
+		await bisect.start(bad.trim(), good.trim());
+		return bisect.active;
+	};
+	/** @type {[string, (...args: any[]) => any][]} */
+	const commands = [
+		['kernelDev.bisect.start', start],
+		['kernelDev.bisect.good', () => bisect.step(['good'])],
+		['kernelDev.bisect.bad', () => bisect.step(['bad'])],
+		['kernelDev.bisect.skip', () => bisect.step(['skip'])],
+		['kernelDev.bisect.reset', () => bisect.reset()],
+		['kernelDev.bisect.run', async () => {
+			if (!bisect.active && !await start())
+				return;
+			const uri = await vscode.window.showOpenDialog({ title: 'Test script: exit 0 = good, 1 = bad, 125 = skip; it gets the build directory',
+				canSelectMany: false, defaultUri: vscode.Uri.file(s.root) });
+			if (uri)
+				await bisect.run(uri[0].fsPath);
+		}],
+		['kernelDev.bisect.copyFixes', async () => {
+			if (!bisect.result)
+				return;
+			const line = await fixesLine(bisect.root, bisect.result.hash);
+			await vscode.env.clipboard.writeText(line);
+			vscode.window.showInformationMessage(`Copied: ${line}`);
+		}],
+	];
+	const view = vscode.window.createTreeView('kernelDev.bisect', { treeDataProvider: tree });
+	for (const [id, fn] of commands)
+		context.subscriptions.push(vscode.commands.registerCommand(id, fn));
+	context.subscriptions.push(view, view.onDidChangeVisibility(() => view.visible && bisect.refresh()));
+	bisect.refresh();
+	return { bisect, view: tree };
 }
 
-module.exports = { Bisect, BisectView, registerBisect, html };
+module.exports = { Bisect, BisectTree, registerBisect };

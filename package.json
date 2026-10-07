@@ -47,17 +47,17 @@
 		"commands": [
 			{
 				"command": "kernelDev.selectArch",
-				"title": "Select Architecture",
+				"title": "Select Architecture…",
 				"category": "Kernel"
 			},
 			{
 				"command": "kernelDev.selectVariant",
-				"title": "Select Debug / Release",
+				"title": "Select Debug or Release…",
 				"category": "Kernel"
 			},
 			{
 				"command": "kernelDev.selectConfig",
-				"title": "Select Base Config",
+				"title": "Select Base Config…",
 				"category": "Kernel",
 				"icon": "$(file-code)"
 			},
@@ -90,12 +90,12 @@
 			},
 			{
 				"command": "kernelDev.menuconfig",
-				"title": "menuconfig",
+				"title": "Run menuconfig",
 				"category": "Kernel"
 			},
 			{
 				"command": "kernelDev.nconfig",
-				"title": "nconfig",
+				"title": "Run nconfig",
 				"category": "Kernel"
 			},
 			{
@@ -115,13 +115,13 @@
 			},
 			{
 				"command": "kernelDev.run",
-				"title": "Run (QEMU)",
+				"title": "Run in QEMU",
 				"category": "Kernel",
 				"icon": "$(play)"
 			},
 			{
 				"command": "kernelDev.debug",
-				"title": "Debug (QEMU + gdb)",
+				"title": "Debug in QEMU",
 				"category": "Kernel",
 				"icon": "$(debug-alt)"
 			},
@@ -138,8 +138,9 @@
 			},
 			{
 				"command": "kernelDev.installTools",
-				"title": "Install Missing Tools (apt)",
-				"category": "Kernel"
+				"title": "Install Missing Tools",
+				"category": "Kernel",
+				"icon": "$(cloud-download)"
 			},
 			{
 				"command": "kernelDev.openSettings",
@@ -148,38 +149,8 @@
 				"icon": "$(settings)"
 			},
 			{
-				"command": "kernelDev.arch.x86_64",
-				"title": "x86_64",
-				"category": "Kernel",
-				"toggled": "kernelDev.arch == x86_64"
-			},
-			{
-				"command": "kernelDev.arch.arm64",
-				"title": "arm64",
-				"category": "Kernel",
-				"toggled": "kernelDev.arch == arm64"
-			},
-			{
-				"command": "kernelDev.arch.riscv64",
-				"title": "riscv64",
-				"category": "Kernel",
-				"toggled": "kernelDev.arch == riscv64"
-			},
-			{
-				"command": "kernelDev.variant.debug",
-				"title": "Debug",
-				"category": "Kernel",
-				"toggled": "kernelDev.variant == debug"
-			},
-			{
-				"command": "kernelDev.variant.release",
-				"title": "Release",
-				"category": "Kernel",
-				"toggled": "kernelDev.variant == release"
-			},
-			{
 				"command": "kernelDev.followSelection",
-				"title": "Point clangd at Selected Build",
+				"title": "Point clangd at the Selected Build",
 				"category": "Kernel"
 			},
 			{
@@ -216,19 +187,19 @@
 			},
 			{
 				"command": "kernelDev.history.refresh",
-				"title": "Refresh",
+				"title": "Refresh File History",
 				"category": "Kernel",
 				"icon": "$(refresh)"
 			},
 			{
 				"command": "kernelDev.history.filter",
-				"title": "Filter by Message or Author…",
+				"title": "Filter History by Message or Author…",
 				"category": "Kernel",
 				"icon": "$(filter)"
 			},
 			{
 				"command": "kernelDev.history.clearFilter",
-				"title": "Clear Filter",
+				"title": "Clear History Filter",
 				"category": "Kernel",
 				"icon": "$(clear-all)"
 			},
@@ -287,77 +258,89 @@
 			},
 			{
 				"command": "kernelDev.series.checkWorking",
-				"title": "Checkpatch Working Changes",
-				"category": "Kernel"
+				"title": "Check Working Changes",
+				"category": "Kernel",
+				"icon": "$(checklist)"
 			},
 			{
 				"command": "kernelDev.series.check",
-				"title": "Check Series (checkpatch + W=1)",
-				"category": "Kernel"
+				"title": "Check Series",
+				"category": "Kernel",
+				"icon": "$(checklist)"
 			},
 			{
 				"command": "kernelDev.series.format",
-				"title": "Format Changed Lines (git clang-format)",
+				"title": "Format Changed Lines",
 				"category": "Kernel"
 			},
 			{
 				"command": "kernelDev.series.pickBase",
 				"title": "Pick Series Base…",
-				"category": "Kernel"
+				"category": "Kernel",
+				"icon": "$(edit)"
 			},
 			{
 				"command": "kernelDev.series.editCover",
 				"title": "Edit Cover Letter",
-				"category": "Kernel"
+				"category": "Kernel",
+				"icon": "$(edit)"
 			},
 			{
 				"command": "kernelDev.series.generate",
-				"title": "Generate Patches (git format-patch)",
-				"category": "Kernel"
+				"title": "Generate Patches",
+				"category": "Kernel",
+				"icon": "$(package)"
 			},
 			{
 				"command": "kernelDev.apply.fetch",
-				"title": "Apply Series from lore…",
-				"category": "Kernel"
+				"title": "Fetch Series from lore…",
+				"category": "Kernel",
+				"icon": "$(cloud-download)"
 			},
 			{
 				"command": "kernelDev.apply.openFiles",
-				"title": "Apply mbox / Patch Files…",
-				"category": "Kernel"
+				"title": "Apply mbox or Patch Files…",
+				"category": "Kernel",
+				"icon": "$(folder-opened)"
 			},
 			{
 				"command": "kernelDev.series.dryRun",
-				"title": "Send Patches: Dry Run (git send-email --dry-run)",
+				"title": "Send Patches: Dry Run",
 				"category": "Kernel"
 			},
 			{
 				"command": "kernelDev.series.send",
-				"title": "Send Patches… (git send-email)",
-				"category": "Kernel"
+				"title": "Send Patches…",
+				"category": "Kernel",
+				"icon": "$(send)"
 			},
 			{
 				"command": "kernelDev.bisect.good",
 				"title": "Bisect: Mark Good",
-				"category": "Kernel"
+				"category": "Kernel",
+				"icon": "$(check)"
 			},
 			{
 				"command": "kernelDev.bisect.bad",
 				"title": "Bisect: Mark Bad",
-				"category": "Kernel"
+				"category": "Kernel",
+				"icon": "$(close)"
 			},
 			{
 				"command": "kernelDev.bisect.skip",
-				"title": "Bisect: Skip",
-				"category": "Kernel"
+				"title": "Bisect: Skip Commit",
+				"category": "Kernel",
+				"icon": "$(debug-step-over)"
 			},
 			{
 				"command": "kernelDev.bisect.reset",
 				"title": "Bisect: Reset",
-				"category": "Kernel"
+				"category": "Kernel",
+				"icon": "$(discard)"
 			},
 			{
 				"command": "kernelDev.oops.decode",
-				"title": "Decode Stack Trace (selection or clipboard)",
+				"title": "Decode Stack Trace",
 				"category": "Kernel"
 			},
 			{
@@ -384,6 +367,125 @@
 				"command": "kernelDev.kunit.runDirectory",
 				"title": "Run KUnit Tests for This Directory",
 				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.editItem",
+				"title": "Change…",
+				"category": "Kernel",
+				"icon": "$(edit)"
+			},
+			{
+				"command": "kernelDev.series.refresh",
+				"title": "Refresh Series",
+				"category": "Kernel",
+				"icon": "$(refresh)"
+			},
+			{
+				"command": "kernelDev.series.nextVersion",
+				"title": "Next Series Version",
+				"category": "Kernel",
+				"icon": "$(add)"
+			},
+			{
+				"command": "kernelDev.series.previousVersion",
+				"title": "Previous Series Version",
+				"category": "Kernel",
+				"icon": "$(remove)"
+			},
+			{
+				"command": "kernelDev.series.editPrefix",
+				"title": "Edit Subject Prefix…",
+				"category": "Kernel",
+				"icon": "$(edit)"
+			},
+			{
+				"command": "kernelDev.series.editRecipients",
+				"title": "Edit Recipients",
+				"category": "Kernel",
+				"icon": "$(edit)"
+			},
+			{
+				"command": "kernelDev.series.fillRecipients",
+				"title": "Fill Recipients from get_maintainer.pl",
+				"category": "Kernel",
+				"icon": "$(person-add)"
+			},
+			{
+				"command": "kernelDev.series.report",
+				"title": "Show checkpatch Report",
+				"category": "Kernel",
+				"icon": "$(output)"
+			},
+			{
+				"command": "kernelDev.series.revealOutput",
+				"title": "Reveal Patches Folder",
+				"category": "Kernel",
+				"icon": "$(folder-opened)"
+			},
+			{
+				"command": "kernelDev.apply.applyCurrent",
+				"title": "Apply to Current Branch",
+				"category": "Kernel",
+				"icon": "$(check)"
+			},
+			{
+				"command": "kernelDev.apply.applyNewBranch",
+				"title": "Apply on New Branch…",
+				"category": "Kernel",
+				"icon": "$(git-branch)"
+			},
+			{
+				"command": "kernelDev.apply.continue",
+				"title": "git am: Continue",
+				"category": "Kernel",
+				"icon": "$(debug-continue)"
+			},
+			{
+				"command": "kernelDev.apply.skip",
+				"title": "git am: Skip Patch",
+				"category": "Kernel",
+				"icon": "$(debug-step-over)"
+			},
+			{
+				"command": "kernelDev.apply.abort",
+				"title": "git am: Abort",
+				"category": "Kernel",
+				"icon": "$(debug-stop)"
+			},
+			{
+				"command": "kernelDev.apply.showLog",
+				"title": "Show b4 Output",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.apply.openLink",
+				"title": "Open Series on lore",
+				"category": "Kernel",
+				"icon": "$(link-external)"
+			},
+			{
+				"command": "kernelDev.apply.clear",
+				"title": "Clear Fetched Series",
+				"category": "Kernel",
+				"icon": "$(clear-all)"
+			},
+			{
+				"command": "kernelDev.bisect.start",
+				"title": "Bisect: Start…",
+				"category": "Kernel",
+				"icon": "$(debug-start)"
+			},
+			{
+				"command": "kernelDev.bisect.run",
+				"title": "Bisect: Run Automatically with a Test Script…",
+				"category": "Kernel",
+				"icon": "$(run-all)"
+			},
+			{
+				"command": "kernelDev.bisect.copyFixes",
+				"title": "Copy Fixes: Line",
+				"category": "Kernel",
+				"icon": "$(copy)"
 			}
 		],
 		"menus": {
@@ -451,26 +553,6 @@
 				{
 					"command": "kernelDev.stop",
 					"when": "kernelDev.active"
-				},
-				{
-					"command": "kernelDev.arch.x86_64",
-					"when": "false"
-				},
-				{
-					"command": "kernelDev.arch.arm64",
-					"when": "false"
-				},
-				{
-					"command": "kernelDev.arch.riscv64",
-					"when": "false"
-				},
-				{
-					"command": "kernelDev.variant.debug",
-					"when": "false"
-				},
-				{
-					"command": "kernelDev.variant.release",
-					"when": "false"
 				},
 				{
 					"command": "kernelDev.followSelection",
@@ -561,62 +643,6 @@
 					"when": "false"
 				},
 				{
-					"command": "kernelDev.series.checkWorking",
-					"when": "kernelDev.active"
-				},
-				{
-					"command": "kernelDev.series.check",
-					"when": "kernelDev.active"
-				},
-				{
-					"command": "kernelDev.series.format",
-					"when": "kernelDev.active"
-				},
-				{
-					"command": "kernelDev.series.pickBase",
-					"when": "kernelDev.active"
-				},
-				{
-					"command": "kernelDev.series.editCover",
-					"when": "kernelDev.active"
-				},
-				{
-					"command": "kernelDev.series.generate",
-					"when": "kernelDev.active"
-				},
-				{
-					"command": "kernelDev.apply.fetch",
-					"when": "kernelDev.active"
-				},
-				{
-					"command": "kernelDev.apply.openFiles",
-					"when": "kernelDev.active"
-				},
-				{
-					"command": "kernelDev.series.dryRun",
-					"when": "kernelDev.active"
-				},
-				{
-					"command": "kernelDev.series.send",
-					"when": "kernelDev.active"
-				},
-				{
-					"command": "kernelDev.bisect.good",
-					"when": "kernelDev.active"
-				},
-				{
-					"command": "kernelDev.bisect.bad",
-					"when": "kernelDev.active"
-				},
-				{
-					"command": "kernelDev.bisect.skip",
-					"when": "kernelDev.active"
-				},
-				{
-					"command": "kernelDev.bisect.reset",
-					"when": "kernelDev.active"
-				},
-				{
 					"command": "kernelDev.oops.decode",
 					"when": "kernelDev.active"
 				},
@@ -643,74 +669,186 @@
 				{
 					"command": "kernelDev.openSettings",
 					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.editItem",
+					"when": "false"
+				},
+				{
+					"command": "kernelDev.series.refresh",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.series.check",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.series.checkWorking",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.series.format",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.series.pickBase",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.series.nextVersion",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.series.previousVersion",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.series.editPrefix",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.series.editCover",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.series.editRecipients",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.series.fillRecipients",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.series.generate",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.series.dryRun",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.series.send",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.series.report",
+					"when": "false"
+				},
+				{
+					"command": "kernelDev.series.revealOutput",
+					"when": "false"
+				},
+				{
+					"command": "kernelDev.apply.fetch",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.apply.openFiles",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.apply.applyCurrent",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.apply.applyNewBranch",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.apply.continue",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.apply.skip",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.apply.abort",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.apply.showLog",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.apply.openLink",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.apply.clear",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.bisect.start",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.bisect.run",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.bisect.good",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.bisect.bad",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.bisect.skip",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.bisect.reset",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.bisect.copyFixes",
+					"when": "false"
 				}
 			],
 			"editor/context": [
 				{
-					"command": "kernelDev.compileFile",
-					"when": "kernelDev.active && resourceExtname =~ /^\\.[cS]$/",
-					"group": "kernel@1"
-				},
-				{
-					"command": "kernelDev.preprocessFile",
-					"when": "kernelDev.active && resourceExtname == .c",
-					"group": "kernel@2"
-				},
-				{
-					"command": "kernelDev.assembleFile",
-					"when": "kernelDev.active && resourceExtname == .c",
-					"group": "kernel@3"
-				},
-				{
-					"command": "kernelDev.history.showFile",
-					"when": "kernelDev.active && resourceScheme == file",
-					"group": "kernelGit@1"
-				},
-				{
-					"command": "kernelDev.history.showLines",
-					"when": "kernelDev.active && resourceScheme == file && editorHasSelection",
-					"group": "kernelGit@2"
-				},
-				{
-					"command": "kernelDev.blame.toggle",
-					"when": "kernelDev.active && (resourceScheme == file || resourceScheme == kernel-git && resourcePath =~ /^\\/blob\\//)",
-					"group": "kernelGit@0"
-				},
-				{
-					"command": "kernelDev.oops.decode",
-					"when": "kernelDev.active && editorHasSelection",
-					"group": "kernel@9"
-				},
-				{
-					"command": "kernelDev.buildDirectory",
-					"when": "kernelDev.active && resourceScheme == file",
-					"group": "kernel@4"
+					"submenu": "kernelDev.editorContext",
+					"when": "kernelDev.active && (resourceScheme == file || resourceScheme == kernel-git)",
+					"group": "z_kernel@1"
 				}
 			],
 			"kernelDev.target": [
 				{
-					"command": "kernelDev.arch.x86_64",
-					"group": "1_arch@0"
+					"command": "kernelDev.configure",
+					"group": "0_steps@1"
 				},
 				{
-					"command": "kernelDev.arch.arm64",
-					"group": "1_arch@1"
+					"command": "kernelDev.build",
+					"group": "0_steps@2"
 				},
 				{
-					"command": "kernelDev.arch.riscv64",
-					"group": "1_arch@2"
+					"command": "kernelDev.run",
+					"group": "0_steps@3",
+					"when": "!kernelDev.vmRunning"
 				},
 				{
-					"command": "kernelDev.variant.debug",
-					"group": "2_variant@1"
+					"command": "kernelDev.debug",
+					"group": "0_steps@4",
+					"when": "!kernelDev.vmRunning"
 				},
 				{
-					"command": "kernelDev.variant.release",
-					"group": "2_variant@2"
+					"command": "kernelDev.stop",
+					"group": "0_steps@5",
+					"when": "kernelDev.vmRunning"
+				},
+				{
+					"command": "kernelDev.selectArch",
+					"group": "1_target@1"
+				},
+				{
+					"command": "kernelDev.selectVariant",
+					"group": "1_target@2"
 				},
 				{
 					"command": "kernelDev.selectConfig",
-					"group": "3_config@1"
+					"group": "1_target@3"
 				},
 				{
 					"command": "kernelDev.menuconfig",
@@ -744,33 +882,8 @@
 			"editor/title": [
 				{
 					"submenu": "kernelDev.target",
-					"when": "kernelDev.active && resourceScheme != kernel-git",
+					"when": "kernelDev.active && resourceScheme == file && (resourceExtname =~ /^\\.(c|h|S|s|rs|lds|dts|dtsi|ld)$/ || resourceFilename =~ /^(Kconfig.*|Makefile.*|Kbuild.*)$/)",
 					"group": "navigation@-10"
-				},
-				{
-					"command": "kernelDev.configure",
-					"when": "kernelDev.active && resourceScheme != kernel-git",
-					"group": "navigation@-9"
-				},
-				{
-					"command": "kernelDev.build",
-					"when": "kernelDev.active && resourceScheme != kernel-git",
-					"group": "navigation@-8"
-				},
-				{
-					"command": "kernelDev.run",
-					"when": "kernelDev.active && resourceScheme != kernel-git && !kernelDev.vmRunning",
-					"group": "navigation@-7"
-				},
-				{
-					"command": "kernelDev.debug",
-					"when": "kernelDev.active && resourceScheme != kernel-git && !kernelDev.vmRunning",
-					"group": "navigation@-6"
-				},
-				{
-					"command": "kernelDev.stop",
-					"when": "kernelDev.active && resourceScheme != kernel-git && kernelDev.vmRunning",
-					"group": "navigation@-5"
 				},
 				{
 					"command": "kernelDev.git.commitWhole",
@@ -785,7 +898,7 @@
 				{
 					"command": "kernelDev.git.openOnLore",
 					"when": "resourceScheme == kernel-git && resourcePath =~ /^\\/(commit|full|file|stat)\\//",
-					"group": "navigation@2"
+					"group": "1_kernel@3"
 				},
 				{
 					"command": "kernelDev.git.copyFixes",
@@ -806,28 +919,73 @@
 			"view/title": [
 				{
 					"command": "kernelDev.configure",
-					"when": "view == kernelDev.panel",
+					"when": "view == kernelDev.kernel",
 					"group": "navigation@1"
 				},
 				{
 					"command": "kernelDev.build",
-					"when": "view == kernelDev.panel",
+					"when": "view == kernelDev.kernel",
 					"group": "navigation@2"
 				},
 				{
 					"command": "kernelDev.run",
-					"when": "view == kernelDev.panel",
+					"when": "view == kernelDev.kernel && !kernelDev.vmRunning",
 					"group": "navigation@3"
 				},
 				{
 					"command": "kernelDev.debug",
-					"when": "view == kernelDev.panel",
+					"when": "view == kernelDev.kernel && !kernelDev.vmRunning",
 					"group": "navigation@4"
 				},
 				{
-					"command": "kernelDev.openSettings",
-					"when": "view == kernelDev.panel",
+					"command": "kernelDev.stop",
+					"when": "view == kernelDev.kernel && kernelDev.vmRunning",
 					"group": "navigation@5"
+				},
+				{
+					"command": "kernelDev.menuconfig",
+					"when": "view == kernelDev.kernel",
+					"group": "1_config@1"
+				},
+				{
+					"command": "kernelDev.nconfig",
+					"when": "view == kernelDev.kernel",
+					"group": "1_config@2"
+				},
+				{
+					"command": "kernelDev.clean",
+					"when": "view == kernelDev.kernel",
+					"group": "2_clean@1"
+				},
+				{
+					"command": "kernelDev.rebuild",
+					"when": "view == kernelDev.kernel",
+					"group": "2_clean@2"
+				},
+				{
+					"command": "kernelDev.mrproper",
+					"when": "view == kernelDev.kernel",
+					"group": "2_clean@3"
+				},
+				{
+					"command": "kernelDev.buildModules",
+					"when": "view == kernelDev.kernel",
+					"group": "3_tools@1"
+				},
+				{
+					"command": "kernelDev.dt.checkChanged",
+					"when": "view == kernelDev.kernel",
+					"group": "3_tools@2"
+				},
+				{
+					"command": "kernelDev.checkTools",
+					"when": "view == kernelDev.kernel",
+					"group": "3_tools@3"
+				},
+				{
+					"command": "kernelDev.openSettings",
+					"when": "view == kernelDev.kernel",
+					"group": "4_settings@1"
 				},
 				{
 					"command": "kernelDev.history.filter",
@@ -848,9 +1006,189 @@
 					"command": "kernelDev.blame.toggle",
 					"when": "view == kernelDev.blame",
 					"group": "navigation@1"
+				},
+				{
+					"command": "kernelDev.series.check",
+					"when": "view == kernelDev.series && !kernelDev.seriesBusy",
+					"group": "navigation@1"
+				},
+				{
+					"command": "kernelDev.series.generate",
+					"when": "view == kernelDev.series && !kernelDev.seriesNoBase",
+					"group": "navigation@2"
+				},
+				{
+					"command": "kernelDev.series.send",
+					"when": "view == kernelDev.series && kernelDev.dryRunOk",
+					"group": "navigation@3"
+				},
+				{
+					"command": "kernelDev.series.refresh",
+					"when": "view == kernelDev.series",
+					"group": "navigation@9"
+				},
+				{
+					"command": "kernelDev.series.checkWorking",
+					"when": "view == kernelDev.series",
+					"group": "1_check@1"
+				},
+				{
+					"command": "kernelDev.series.format",
+					"when": "view == kernelDev.series",
+					"group": "1_check@2"
+				},
+				{
+					"command": "kernelDev.series.fillRecipients",
+					"when": "view == kernelDev.series",
+					"group": "2_patches@1"
+				},
+				{
+					"command": "kernelDev.series.editRecipients",
+					"when": "view == kernelDev.series",
+					"group": "2_patches@2"
+				},
+				{
+					"command": "kernelDev.series.editCover",
+					"when": "view == kernelDev.series",
+					"group": "2_patches@3"
+				},
+				{
+					"command": "kernelDev.series.editPrefix",
+					"when": "view == kernelDev.series",
+					"group": "2_patches@4"
+				},
+				{
+					"command": "kernelDev.series.nextVersion",
+					"when": "view == kernelDev.series",
+					"group": "2_patches@5"
+				},
+				{
+					"command": "kernelDev.series.pickBase",
+					"when": "view == kernelDev.series",
+					"group": "2_patches@6"
+				},
+				{
+					"command": "kernelDev.series.dryRun",
+					"when": "view == kernelDev.series && kernelDev.patchesGenerated",
+					"group": "3_send@1"
+				},
+				{
+					"command": "kernelDev.series.send",
+					"when": "view == kernelDev.series && kernelDev.patchesGenerated",
+					"group": "3_send@2"
+				},
+				{
+					"command": "kernelDev.apply.continue",
+					"when": "view == kernelDev.apply && kernelDev.amInProgress",
+					"group": "navigation@1"
+				},
+				{
+					"command": "kernelDev.apply.skip",
+					"when": "view == kernelDev.apply && kernelDev.amInProgress",
+					"group": "navigation@2"
+				},
+				{
+					"command": "kernelDev.apply.abort",
+					"when": "view == kernelDev.apply && kernelDev.amInProgress",
+					"group": "navigation@3"
+				},
+				{
+					"command": "kernelDev.apply.applyCurrent",
+					"when": "view == kernelDev.apply && kernelDev.applyFetched && !kernelDev.amInProgress",
+					"group": "navigation@4"
+				},
+				{
+					"command": "kernelDev.apply.applyNewBranch",
+					"when": "view == kernelDev.apply && kernelDev.applyFetched && !kernelDev.amInProgress",
+					"group": "navigation@5"
+				},
+				{
+					"command": "kernelDev.apply.fetch",
+					"when": "view == kernelDev.apply && !kernelDev.amInProgress",
+					"group": "navigation@6"
+				},
+				{
+					"command": "kernelDev.apply.openFiles",
+					"when": "view == kernelDev.apply && !kernelDev.amInProgress",
+					"group": "1_apply@1"
+				},
+				{
+					"command": "kernelDev.apply.showLog",
+					"when": "view == kernelDev.apply && kernelDev.applyFetched",
+					"group": "2_series@1"
+				},
+				{
+					"command": "kernelDev.apply.openLink",
+					"when": "view == kernelDev.apply && kernelDev.applyFetched",
+					"group": "2_series@2"
+				},
+				{
+					"command": "kernelDev.apply.clear",
+					"when": "view == kernelDev.apply && kernelDev.applyFetched",
+					"group": "2_series@3"
+				},
+				{
+					"command": "kernelDev.bisect.good",
+					"when": "view == kernelDev.bisect && kernelDev.bisectActive",
+					"group": "navigation@1"
+				},
+				{
+					"command": "kernelDev.bisect.bad",
+					"when": "view == kernelDev.bisect && kernelDev.bisectActive",
+					"group": "navigation@2"
+				},
+				{
+					"command": "kernelDev.bisect.skip",
+					"when": "view == kernelDev.bisect && kernelDev.bisectActive",
+					"group": "navigation@3"
+				},
+				{
+					"command": "kernelDev.build",
+					"when": "view == kernelDev.bisect && kernelDev.bisectActive",
+					"group": "1_step@1"
+				},
+				{
+					"command": "kernelDev.run",
+					"when": "view == kernelDev.bisect && kernelDev.bisectActive",
+					"group": "1_step@2"
+				},
+				{
+					"command": "kernelDev.bisect.run",
+					"when": "view == kernelDev.bisect",
+					"group": "2_bisect@1"
+				},
+				{
+					"command": "kernelDev.bisect.start",
+					"when": "view == kernelDev.bisect && !kernelDev.bisectActive",
+					"group": "navigation@1"
+				},
+				{
+					"command": "kernelDev.bisect.reset",
+					"when": "view == kernelDev.bisect && kernelDev.bisectActive",
+					"group": "2_bisect@2"
 				}
 			],
 			"view/item/context": [
+				{
+					"command": "kernelDev.editItem",
+					"when": "view == kernelDev.kernel && viewItem == edit",
+					"group": "inline"
+				},
+				{
+					"command": "kernelDev.editItem",
+					"when": "view == kernelDev.kernel && viewItem == edit",
+					"group": "1_edit@1"
+				},
+				{
+					"command": "kernelDev.stop",
+					"when": "view == kernelDev.kernel && viewItem == vmRunning",
+					"group": "inline"
+				},
+				{
+					"command": "kernelDev.installTools",
+					"when": "view == kernelDev.kernel && viewItem == toolsMissing",
+					"group": "inline"
+				},
 				{
 					"command": "kernelDev.git.copyHash",
 					"when": "view == kernelDev.history && viewItem == commit",
@@ -900,23 +1238,202 @@
 					"command": "kernelDev.blame.openOnLore",
 					"when": "view == kernelDev.blame && viewItem == blameCommit",
 					"group": "3_open@1"
+				},
+				{
+					"command": "kernelDev.series.pickBase",
+					"when": "view == kernelDev.series && viewItem == base",
+					"group": "inline"
+				},
+				{
+					"command": "kernelDev.series.pickBase",
+					"when": "view == kernelDev.series && viewItem == base",
+					"group": "1_item@1"
+				},
+				{
+					"command": "kernelDev.series.nextVersion",
+					"when": "view == kernelDev.series && viewItem == version",
+					"group": "inline"
+				},
+				{
+					"command": "kernelDev.series.nextVersion",
+					"when": "view == kernelDev.series && viewItem == version",
+					"group": "1_item@1"
+				},
+				{
+					"command": "kernelDev.series.editPrefix",
+					"when": "view == kernelDev.series && viewItem == prefix",
+					"group": "inline"
+				},
+				{
+					"command": "kernelDev.series.editPrefix",
+					"when": "view == kernelDev.series && viewItem == prefix",
+					"group": "1_item@1"
+				},
+				{
+					"command": "kernelDev.series.editCover",
+					"when": "view == kernelDev.series && viewItem == cover",
+					"group": "inline"
+				},
+				{
+					"command": "kernelDev.series.editCover",
+					"when": "view == kernelDev.series && viewItem == cover",
+					"group": "1_item@1"
+				},
+				{
+					"command": "kernelDev.series.editRecipients",
+					"when": "view == kernelDev.series && viewItem == recipients",
+					"group": "inline"
+				},
+				{
+					"command": "kernelDev.series.editRecipients",
+					"when": "view == kernelDev.series && viewItem == recipients",
+					"group": "1_item@1"
+				},
+				{
+					"command": "kernelDev.series.report",
+					"when": "view == kernelDev.series && viewItem == commitChecked",
+					"group": "inline"
+				},
+				{
+					"command": "kernelDev.series.report",
+					"when": "view == kernelDev.series && viewItem == commitChecked",
+					"group": "1_item@1"
+				},
+				{
+					"command": "kernelDev.series.report",
+					"when": "view == kernelDev.series && viewItem == workingChecked",
+					"group": "inline"
+				},
+				{
+					"command": "kernelDev.series.report",
+					"when": "view == kernelDev.series && viewItem == workingChecked",
+					"group": "1_item@1"
+				},
+				{
+					"command": "kernelDev.series.checkWorking",
+					"when": "view == kernelDev.series && viewItem == working",
+					"group": "inline"
+				},
+				{
+					"command": "kernelDev.series.checkWorking",
+					"when": "view == kernelDev.series && viewItem == working",
+					"group": "1_item@1"
+				},
+				{
+					"command": "kernelDev.series.revealOutput",
+					"when": "view == kernelDev.series && viewItem == generated",
+					"group": "inline"
+				},
+				{
+					"command": "kernelDev.series.revealOutput",
+					"when": "view == kernelDev.series && viewItem == generated",
+					"group": "1_item@1"
+				},
+				{
+					"command": "kernelDev.series.previousVersion",
+					"when": "view == kernelDev.series && viewItem == version",
+					"group": "1_item@2"
+				},
+				{
+					"command": "kernelDev.series.fillRecipients",
+					"when": "view == kernelDev.series && viewItem == recipients",
+					"group": "1_item@2"
+				},
+				{
+					"command": "kernelDev.editItem",
+					"when": "view == kernelDev.series && viewItem == edit",
+					"group": "inline"
+				},
+				{
+					"command": "kernelDev.editItem",
+					"when": "view == kernelDev.series && viewItem == edit",
+					"group": "1_item@1"
+				},
+				{
+					"command": "kernelDev.editItem",
+					"when": "view == kernelDev.apply && viewItem == edit",
+					"group": "inline"
+				},
+				{
+					"command": "kernelDev.editItem",
+					"when": "view == kernelDev.apply && viewItem == edit",
+					"group": "1_item@1"
+				},
+				{
+					"command": "kernelDev.bisect.copyFixes",
+					"when": "view == kernelDev.bisect && viewItem == result",
+					"group": "inline"
+				},
+				{
+					"command": "kernelDev.bisect.copyFixes",
+					"when": "view == kernelDev.bisect && viewItem == result",
+					"group": "1_item@1"
 				}
 			],
 			"explorer/context": [
 				{
+					"submenu": "kernelDev.explorerContext",
+					"when": "kernelDev.active",
+					"group": "z_kernel@1"
+				}
+			],
+			"kernelDev.editorContext": [
+				{
+					"command": "kernelDev.compileFile",
+					"when": "kernelDev.active && resourceExtname =~ /^\\.[cS]$/",
+					"group": "1_build@1"
+				},
+				{
+					"command": "kernelDev.preprocessFile",
+					"when": "kernelDev.active && resourceExtname == .c",
+					"group": "1_build@2"
+				},
+				{
+					"command": "kernelDev.assembleFile",
+					"when": "kernelDev.active && resourceExtname == .c",
+					"group": "1_build@3"
+				},
+				{
+					"command": "kernelDev.history.showFile",
+					"when": "kernelDev.active && resourceScheme == file",
+					"group": "2_git@1"
+				},
+				{
+					"command": "kernelDev.history.showLines",
+					"when": "kernelDev.active && resourceScheme == file && editorHasSelection",
+					"group": "2_git@2"
+				},
+				{
+					"command": "kernelDev.blame.toggle",
+					"when": "kernelDev.active && (resourceScheme == file || resourceScheme == kernel-git && resourcePath =~ /^\\/blob\\//)",
+					"group": "2_git@3"
+				},
+				{
+					"command": "kernelDev.oops.decode",
+					"when": "kernelDev.active && editorHasSelection",
+					"group": "3_debug@1"
+				},
+				{
+					"command": "kernelDev.buildDirectory",
+					"when": "kernelDev.active && resourceScheme == file",
+					"group": "1_build@4"
+				}
+			],
+			"kernelDev.explorerContext": [
+				{
 					"command": "kernelDev.history.showFile",
 					"when": "kernelDev.active && !explorerResourceIsFolder",
-					"group": "kernelGit@1"
+					"group": "1_git@1"
 				},
 				{
 					"command": "kernelDev.buildDirectory",
 					"when": "kernelDev.active",
-					"group": "kernel@1"
+					"group": "2_build@1"
 				},
 				{
 					"command": "kernelDev.kunit.runDirectory",
 					"when": "kernelDev.active",
-					"group": "kernel@2"
+					"group": "2_build@2"
 				}
 			]
 		},
@@ -1350,6 +1867,18 @@
 						"default": "patches/${branch}/v${version}",
 						"markdownDescription": "Where Generate patches writes the series, relative to the kernel tree or absolute. `${branch}` and `${version}` are substituted.",
 						"scope": "resource"
+					},
+					"kernelDev.apply.addLink": {
+						"type": "boolean",
+						"default": true,
+						"scope": "resource",
+						"markdownDescription": "When fetching a series with `b4 am`, add a `Link:` trailer to each patch (`-l`)."
+					},
+					"kernelDev.apply.addSignoff": {
+						"type": "boolean",
+						"default": false,
+						"scope": "resource",
+						"markdownDescription": "When fetching a series with `b4 am`, add your `Signed-off-by:` to each patch (`-s`)."
 					}
 				}
 			},
@@ -1394,51 +1923,60 @@
 		"views": {
 			"kernelDev": [
 				{
-					"type": "webview",
-					"id": "kernelDev.panel",
+					"id": "kernelDev.kernel",
 					"name": "Kernel",
-					"when": "kernelDev.active"
+					"when": "kernelDev.active",
+					"icon": "media/kernel.svg"
 				}
 			],
 			"kernelGit": [
 				{
-					"type": "webview",
 					"id": "kernelDev.series",
 					"name": "Series",
-					"when": "kernelDev.active"
+					"when": "kernelDev.active",
+					"icon": "media/series.svg"
 				},
 				{
-					"type": "webview",
 					"id": "kernelDev.apply",
 					"name": "Apply",
-					"when": "kernelDev.active"
+					"when": "kernelDev.active",
+					"icon": "media/apply.svg"
 				},
 				{
-					"type": "webview",
 					"id": "kernelDev.bisect",
 					"name": "Bisect",
 					"when": "kernelDev.active",
-					"visibility": "collapsed"
+					"icon": "media/bisect.svg"
 				}
 			],
 			"kernelHistory": [
 				{
 					"id": "kernelDev.history",
 					"name": "File History",
-					"when": "kernelDev.active"
+					"when": "kernelDev.active",
+					"icon": "media/history.svg"
 				},
 				{
 					"id": "kernelDev.blame",
 					"name": "Blame",
-					"when": "kernelDev.active"
+					"when": "kernelDev.active",
+					"icon": "media/blame.svg"
 				}
 			]
 		},
 		"submenus": [
 			{
 				"id": "kernelDev.target",
-				"label": "Kernel Target (arch / Debug-Release / config)",
+				"label": "Kernel Workbench",
 				"icon": "$(chip)"
+			},
+			{
+				"id": "kernelDev.editorContext",
+				"label": "Kernel Workbench"
+			},
+			{
+				"id": "kernelDev.explorerContext",
+				"label": "Kernel Workbench"
 			}
 		],
 		"problemMatchers": [
@@ -1460,6 +1998,23 @@
 					"severity": 5,
 					"message": 6
 				}
+			}
+		],
+		"viewsWelcome": [
+			{
+				"view": "kernelDev.series",
+				"contents": "No base for the series: the branch has no upstream and the ref in [kernelDev.patches.base](command:workbench.action.openSettings?%5B%22kernelDev.patches.base%22%5D) does not exist in this repository.\n[Pick the Base](command:kernelDev.series.pickBase)",
+				"when": "kernelDev.seriesNoBase"
+			},
+			{
+				"view": "kernelDev.apply",
+				"contents": "Fetch a patch series from lore.kernel.org with b4, review it, then apply it with git am.\n[Fetch Series from lore…](command:kernelDev.apply.fetch)\n[Apply mbox or Patch Files…](command:kernelDev.apply.openFiles)",
+				"when": "kernelDev.applyEmpty"
+			},
+			{
+				"view": "kernelDev.bisect",
+				"contents": "Find the commit that introduced a bug with git bisect. Each step can build and boot the kernel selected in the Kernel view.\n[Start Bisect…](command:kernelDev.bisect.start)\n[Bisect Automatically with a Test Script…](command:kernelDev.bisect.run)",
+				"when": "kernelDev.bisectIdle"
 			}
 		]
 	}

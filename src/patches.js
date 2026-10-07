@@ -31,6 +31,8 @@ class Patches {
 		this.output = undefined;
 		/** Cover letter files being edited: path -> branch. */
 		this.editing = new Map();
+		/** @type {Set<string>} recipient files being edited */
+		this.recipientFiles = new Set();
 		series.context.subscriptions.push(vscode.workspace.onDidSaveTextDocument(d => this.saved(d)));
 	}
 
@@ -79,8 +81,50 @@ class Patches {
 		vscode.window.showInformationMessage(`Kernel: save to store the cover letter of "${this.branch}". The first paragraph is the subject.`);
 	}
 
+	/**
+	 * Edit To/Cc in an editor tab: one address per line under "To:" and
+	 * "Cc:"; saving stores them for the branch.
+	 */
+	async editRecipients() {
+		const dir = (this.series.context.storageUri || this.series.context.globalStorageUri).fsPath;
+		fs.mkdirSync(dir, { recursive: true });
+		const file = path.join(dir, `recipients-${(this.branch || 'detached').replace(/[^\w.-]+/g, '_')}.txt`);
+		fs.writeFileSync(file, [
+			`# Recipients of the series on ${this.branch || 'the detached HEAD'}: one address per line.`,
+			'# Save to apply. Lines starting with # are ignored.',
+			'To:', ...this.to, '', 'Cc:', ...this.cc, '',
+		].join('\n'));
+		this.recipientFiles.add(file);
+		await vscode.window.showTextDocument(vscode.Uri.file(file), { preview: false });
+	}
+
+	/** Ask for the subject prefix (PATCH, PATCH net-next, RFC PATCH, ...). */
+	async editPrefix() {
+		const v = await vscode.window.showInputBox({ title: 'Subject prefix', value: this.prefix, prompt: 'e.g. PATCH, PATCH net-next, RFC PATCH' });
+		if (v !== undefined)
+			await this.set('prefix', v.trim() || 'PATCH');
+	}
+
 	/** @param {vscode.TextDocument} doc */
 	async saved(doc) {
+		if (this.recipientFiles.has(doc.uri.fsPath)) {
+			/** @type {string[]} */
+			const to = [];
+			/** @type {string[]} */
+			const cc = [];
+			let into = to;
+			for (const raw of doc.getText().split('\n')) {
+				const line = raw.trim();
+				if (!line || line.startsWith('#'))
+					continue;
+				if (/^to:$/i.test(line)) { into = to; continue; }
+				if (/^cc:$/i.test(line)) { into = cc; continue; }
+				into.push(line.replace(/,$/, ''));
+			}
+			await this.set('to', to);
+			await this.set('cc', cc);
+			return;
+		}
 		const branch = this.editing.get(doc.uri.fsPath);
 		if (!branch)
 			return;

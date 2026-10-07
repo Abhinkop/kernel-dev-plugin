@@ -156,7 +156,7 @@ A **series** is the commits of the current branch on top of a base.
 **Check series** does:
 
 - **checkpatch** on every commit, with `--strict` and an ignore list as
-  options. Each commit shows ✔ / ⚠ / ✖, and clicking the result opens
+  options. Each commit shows a pass, warning or error icon, and its report opens from
   checkpatch's report.
 - **W=1** on every `.c` file the series touches, using the Kernel tab's build.
   This works even for files disabled in `.config`.
