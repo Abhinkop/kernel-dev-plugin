@@ -7,4 +7,5 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
 	ca-certificates git git-email libmailtools-perl libnet-smtp-ssl-perl perl python3 \
 	make gcc libc6-dev flex bison bc libelf-dev libssl-dev cpio file \
 	qemu-system-x86 gdb busybox-static procps \
+	gcc-aarch64-linux-gnu gcc-riscv64-linux-gnu qemu-system-arm qemu-system-misc opensbi gdb-multiarch \
 	&& rm -rf /var/lib/apt/lists/*

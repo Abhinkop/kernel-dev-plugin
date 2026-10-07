@@ -3,6 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 const { archInfo } = require('./arch');
 
 /** @typedef {import('./settings').Settings} Settings */
@@ -57,7 +58,7 @@ function requirements(s) {
 	if (s.get('run.mode', 'qemu') === 'virtme') {
 		reqs.push({ step: 'run', what: 'vng', pkg: 'virtme-ng', present: () => onPath('vng') });
 	} else {
-		const qemuPkg = /** @type {Record<string, string>} */ ({ x86_64: 'qemu-system-x86', arm64: 'qemu-system-arm', riscv64: 'qemu-system-misc' })[arch];
+		const qemuPkg = qemuPackage(arch);
 		reqs.push({ step: 'run', what: info.qemu, pkg: qemuPkg, present: () => onPath(info.qemu) });
 		const initramfs = s.get('run.initramfs', /** @type {Record<string,string>} */ ({}))[arch];
 		if (initramfs)
@@ -81,6 +82,36 @@ function requirements(s) {
 		reqs.push({ step: 'check', what: 'ocamlopt', pkg: 'ocaml-nox', present: () => onPath('ocamlopt') || onPath('ocamlopt.opt') });
 	}
 	return reqs;
+}
+
+/** @type {Map<string, boolean>} */
+const aptKnows = new Map();
+
+/**
+ * Whether apt has a package of that name (cached).
+ * @param {string} pkg
+ */
+function aptHas(pkg) {
+	if (!aptKnows.has(pkg)) {
+		let has = false;
+		try {
+			has = /^Candidate: (?!\(none\))/m.test(execFileSync('apt-cache', ['policy', pkg], { encoding: 'utf8', timeout: 5000 }));
+		} catch {}
+		aptKnows.set(pkg, has);
+	}
+	return /** @type {boolean} */ (aptKnows.get(pkg));
+}
+
+/**
+ * The Debian/Ubuntu package with an arch's QEMU. qemu-system-riscv64 was
+ * in qemu-system-misc until QEMU 10 packaging split it out (Debian
+ * trixie+, Ubuntu 25.10+).
+ * @param {string} arch
+ */
+function qemuPackage(arch) {
+	if (arch === 'riscv64')
+		return aptHas('qemu-system-riscv') ? 'qemu-system-riscv' : 'qemu-system-misc';
+	return /** @type {Record<string, string>} */ ({ x86_64: 'qemu-system-x86', arm64: 'qemu-system-arm' })[arch];
 }
 
 /**
@@ -134,4 +165,4 @@ function onPath(bin) {
 	});
 }
 
-module.exports = { requirements, buildRequirements, missing, installCommand, describe, onPath };
+module.exports = { requirements, buildRequirements, missing, installCommand, describe, onPath, qemuPackage, aptKnows };

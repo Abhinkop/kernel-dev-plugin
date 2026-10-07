@@ -142,6 +142,16 @@ describe('tools', () => {
 		assert.ok(names(['CROSS_COMPILE=', 'CC=ccache gcc']).includes('ccache'));
 	});
 
+	it('names the QEMU package for each architecture and distro', () => {
+		tools.aptKnows.set('qemu-system-riscv', true);
+		assert.strictEqual(tools.qemuPackage('riscv64'), 'qemu-system-riscv', 'split out since QEMU 10 packaging');
+		tools.aptKnows.set('qemu-system-riscv', false);
+		assert.strictEqual(tools.qemuPackage('riscv64'), 'qemu-system-misc', 'older Debian/Ubuntu');
+		tools.aptKnows.clear();
+		assert.strictEqual(tools.qemuPackage('arm64'), 'qemu-system-arm');
+		assert.strictEqual(tools.qemuPackage('x86_64'), 'qemu-system-x86');
+	});
+
 	it('names packages and builds one install command', () => {
 		const reqs = [
 			{ step: 'build', what: 'flex', pkg: 'flex', present: () => false },
