@@ -52,6 +52,8 @@ class FileHistory {
 		this.onDidChangeTreeData = this._onDidChangeTreeData.event;
 		/** @type {vscode.TreeView<Item> | undefined} */
 		this.view = undefined;
+		/** @type {Map<string, string[]>} */
+		this.nameCache = new Map();
 	}
 
 	/** @param {vscode.TextEditor | undefined} editor */
@@ -99,10 +101,14 @@ class FileHistory {
 				commits = await log(this.root, ['-s', `-L${target.start},${target.end}:${target.file}`], { cancel: cancel.token });
 				this.more = false;
 			} else if (this.filter) {
-				// --grep (whole message) and --author are ANDed by git; we want either.
+				// --follow only learns a file's older name when it walks past
+				// the rename, which a --grep filter can hide; so filter over
+				// all the names the file has had instead. --grep (whole
+				// message) and --author are ANDed by git; we want either.
+				const names = await this.names(target.file, cancel.token);
 				const [bySubject, byAuthor] = await Promise.all([
-					log(this.root, ['--follow', '-i', `--grep=${this.filter}`, '-n', '500'], { paths: [target.file], names: true, cancel: cancel.token }),
-					log(this.root, ['--follow', '-i', `--author=${this.filter}`, '-n', '500'], { paths: [target.file], names: true, cancel: cancel.token }),
+					log(this.root, ['-i', `--grep=${this.filter}`, '-n', '500'], { paths: names, names: true, cancel: cancel.token }),
+					log(this.root, ['-i', `--author=${this.filter}`, '-n', '500'], { paths: names, names: true, cancel: cancel.token }),
 				]);
 				const seen = new Set();
 				commits = [...bySubject, ...byAuthor]
@@ -124,6 +130,20 @@ class FileHistory {
 		}
 		this.loading = false;
 		this.refresh();
+	}
+
+	/**
+	 * Every name a file has had (git log --follow), cached per file.
+	 * @param {string} file @param {vscode.CancellationToken} cancel
+	 */
+	async names(file, cancel) {
+		const cached = this.nameCache.get(file);
+		if (cached)
+			return cached;
+		const out = await git(this.root, ['log', '--follow', '--name-only', '--format=', '--', file], { cancel });
+		const names = [...new Set([file, ...out.split('\n').map(l => l.trim()).filter(Boolean)])];
+		this.nameCache.set(file, names);
+		return names;
 	}
 
 	refresh() {
