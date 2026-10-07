@@ -121,6 +121,31 @@ e2e('End to end', function () {
 		await cfg().update('kunit.kunitconfig', undefined, vscode.ConfigurationTarget.Workspace);
 	});
 
+	it('configures and builds a Release kernel with LLVM', async () => {
+		// From the clean base: the W=1 test's unused variable is an error
+		// for clang with the defconfig's CONFIG_WERROR.
+		git('checkout', '-q', '-f', 'kwb-test-base');
+		await x.settings.select('variant', 'release');
+		await cfg().update('toolchain', 'llvm', vscode.ConfigurationTarget.Workspace);
+		try {
+			assert.strictEqual(await time('End to end', 'Configure x86_64 Release with LLVM', () => vscode.commands.executeCommand('kernelDev.configure')), 0);
+			const st = x.settings.configured();
+			assert.strictEqual(st.variant, 'release');
+			assert.ok(st.makeArgs.includes('LLVM=1'), st.makeArgs.join(' '));
+			assert.match(st.buildDir, /x86_64[/\\]release$/);
+			const conf = fs.readFileSync(path.join(st.buildDir, '.config'), 'utf8');
+			assert.match(conf, /^CONFIG_CC_IS_CLANG=y$/m);
+			assert.doesNotMatch(conf, /^CONFIG_GDB_SCRIPTS=y$/m, 'Release has no debug options');
+			assert.strictEqual(await time('End to end', 'Build x86_64 Release with LLVM', () => vscode.commands.executeCommand('kernelDev.build')), 0);
+			assert.ok(fs.existsSync(x.kbuild.image(st)));
+			const db = JSON.parse(fs.readFileSync(path.join(tree(), 'compile_commands.json'), 'utf8'));
+			assert.ok(db.some(e => /clang/.test(e.command || (e.arguments || []).join(' '))), 'clangd gets the clang build');
+		} finally {
+			await x.settings.select('variant', 'debug');
+			await cfg().update('toolchain', 'gcc', vscode.ConfigurationTarget.Workspace);
+		}
+	});
+
 	after(async () => {
 		for (const k of ['toolchain', 'terminal.afterTask', 'run.initramfs', 'run.kvm', 'buildBeforeRun'])
 			await cfg().update(k, undefined, vscode.ConfigurationTarget.Workspace);

@@ -11,7 +11,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { runTests } = require('@vscode/test-electron');
+const { runTests, downloadAndUnzipVSCode, resolveCliArgsFromVSCodeExecutablePath } = require('@vscode/test-electron');
 
 const ext = path.resolve(__dirname, '../..');
 const source = path.resolve(process.env.KWB_KERNEL_TREE || path.join(ext, '../linux-playground'));
@@ -34,11 +34,22 @@ async function main() {
 
 	const results = path.join(ext, 'test-results');
 	fs.mkdirSync(results, { recursive: true });
+	const version = process.env.KWB_VSCODE_VERSION || 'stable';
+	const vscodeExecutablePath = await downloadAndUnzipVSCode(version);
+	// Only the extension under test, plus for the end-to-end run the
+	// C/C++ extension, for a real debug session.
+	const extensions = path.join(work, 'extensions');
+	fs.mkdirSync(extensions);
+	if (process.env.KWB_E2E === '1') {
+		const [cli, ...cliArgs] = resolveCliArgsFromVSCodeExecutablePath(vscodeExecutablePath);
+		execFileSync(cli, [...cliArgs.filter(a => !a.startsWith('--extensions-dir')), '--extensions-dir', extensions,
+			'--install-extension', 'ms-vscode.cpptools'], { stdio: 'inherit' });
+	}
 	await runTests({
-		version: process.env.KWB_VSCODE_VERSION || 'stable',
+		vscodeExecutablePath,
 		extensionDevelopmentPath: ext,
 		extensionTestsPath: path.join(__dirname, 'index.js'),
-		launchArgs: [tree, '--disable-extensions', '--disable-workspace-trust', '--user-data-dir', path.join(work, 'user'),
+		launchArgs: [tree, '--extensions-dir', extensions, '--disable-workspace-trust', '--user-data-dir', path.join(work, 'user'),
 			'--no-sandbox', '--disable-gpu', '--disable-updates', '--skip-welcome', '--skip-release-notes'],
 		extensionTestsEnv: {
 			KWB_TREE: tree,
