@@ -900,8 +900,33 @@
 			"editor/title": [
 				{
 					"submenu": "kernelDev.target",
-					"when": "kernelDev.active && resourceScheme == file && (resourceExtname =~ /^\\.(c|h|S|s|rs|lds|dts|dtsi|ld)$/ || resourceFilename =~ /^(Kconfig.*|Makefile.*|Kbuild.*)$/)",
+					"when": "kernelDev.active && resourceScheme != kernel-git",
 					"group": "navigation@-10"
+				},
+				{
+					"command": "kernelDev.configure",
+					"when": "kernelDev.active && resourceScheme != kernel-git",
+					"group": "navigation@-9"
+				},
+				{
+					"command": "kernelDev.build",
+					"when": "kernelDev.active && resourceScheme != kernel-git",
+					"group": "navigation@-8"
+				},
+				{
+					"command": "kernelDev.run",
+					"when": "kernelDev.active && resourceScheme != kernel-git && !kernelDev.vmRunning",
+					"group": "navigation@-7"
+				},
+				{
+					"command": "kernelDev.debug",
+					"when": "kernelDev.active && resourceScheme != kernel-git && !kernelDev.vmRunning",
+					"group": "navigation@-6"
+				},
+				{
+					"command": "kernelDev.stop",
+					"when": "kernelDev.active && resourceScheme != kernel-git && kernelDev.vmRunning",
+					"group": "navigation@-5"
 				},
 				{
 					"command": "kernelDev.git.commitWhole",
