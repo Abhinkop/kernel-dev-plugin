@@ -3,7 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { archInfo, isNative } = require('./arch');
+const { archInfo } = require('./arch');
 
 /** @typedef {import('./settings').Settings} Settings */
 
@@ -52,23 +52,15 @@ function requirements(s) {
 	/** @type {Requirement[]} */
 	const reqs = buildRequirements(makeArgs);
 
-	if (s.get('run.mode', 'initramfs') === 'virtme') {
+	if (s.get('run.mode', 'qemu') === 'virtme') {
 		reqs.push({ step: 'run', what: 'vng', pkg: 'virtme-ng', present: () => onPath('vng') });
 	} else {
 		const qemuPkg = /** @type {Record<string, string>} */ ({ x86_64: 'qemu-system-x86', arm64: 'qemu-system-arm', riscv64: 'qemu-system-misc' })[arch];
 		reqs.push({ step: 'run', what: info.qemu, pkg: qemuPkg, present: () => onPath(info.qemu) });
-		reqs.push({ step: 'run', what: 'gzip', pkg: 'gzip', present: () => onPath('gzip') });
-		if (!s.get('run.initramfs', /** @type {Record<string,string>} */ ({}))[arch]) {
-			const configured = s.get('run.busybox', /** @type {Record<string,string>} */ ({}))[arch];
-			if (configured)
-				reqs.push({ step: 'run', what: `busybox at ${configured}`, hint: 'fix kernelDev.run.busybox',
-					present: () => fs.existsSync(path.resolve(s.root, configured)) });
-			else if (isNative(arch))
-				reqs.push({ step: 'run', what: 'busybox', pkg: 'busybox-static', present: () => onPath('busybox') });
-			else
-				reqs.push({ step: 'run', what: `static ${arch} busybox`, hint: `set its path in the Kernel panel (kernelDev.run.busybox)`,
-					present: () => false });
-		}
+		const initramfs = s.get('run.initramfs', /** @type {Record<string,string>} */ ({}))[arch];
+		if (initramfs)
+			reqs.push({ step: 'run', what: `initramfs ${initramfs}`, hint: 'fix kernelDev.run.initramfs',
+				present: () => fs.existsSync(path.resolve(s.root, initramfs)) });
 	}
 
 	const gdb = s.gdbPath();

@@ -49,15 +49,15 @@ function activate(context) {
 			return;
 		lastShown = text;
 		const buttons = cmd ? ['Run Install Command', 'Copy Command'] : [];
-		if (missing.some(r => r.what.includes('busybox') && !r.pkg))
-			buttons.push('Set Busybox Path');
+		if (missing.some(r => r.what.startsWith('initramfs ')))
+			buttons.push('Open Kernel Panel');
 		const pick = await vscode.window.showErrorMessage(
 			`Kernel: missing tools for ${s.arch}, ${describe(s)}: ${text}.` + (cmd ? ` Install with: ${cmd}` : ''), ...buttons);
 		if (pick === 'Run Install Command')
 			runInstall(cmd);
 		else if (pick === 'Copy Command')
 			await vscode.env.clipboard.writeText(cmd);
-		else if (pick === 'Set Busybox Path')
+		else if (pick === 'Open Kernel Panel')
 			await vscode.commands.executeCommand('workbench.view.extension.kernelDev');
 	};
 	/** @param {string} cmd */
@@ -119,9 +119,9 @@ function activate(context) {
 		context.subscriptions.push(vscode.commands.registerCommand(id, fn));
 }
 
-/** "gcc" / "llvm", "initramfs" / "virtme" @param {import('./src/settings').Settings} s */
+/** "gcc" / "llvm", "qemu" / "virtme" @param {import('./src/settings').Settings} s */
 function describe(s) {
-	return `${s.get('toolchain', 'gcc')}, ${s.get('run.mode', 'initramfs')}`;
+	return `${s.get('toolchain', 'gcc')}, ${s.get('run.mode', 'qemu')}`;
 }
 
 function deactivate() {}
