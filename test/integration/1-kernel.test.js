@@ -28,10 +28,11 @@ describe('Kernel Workbench in VS Code', function () {
 	});
 
 	describe('Kernel view', () => {
-		it('shows target, status and options', async () => {
-			const top = await time('Kernel tab', 'render Kernel view (3 groups, 2 levels)', () => labels(x.kernelView, undefined, 2),
+		it('shows steps, target, status and options', async () => {
+			const top = await time('Kernel tab', 'render Kernel view (5 groups, 2 levels)', () => labels(x.kernelView, undefined, 2),
 				l => `${l.length} rows`);
-			assert.deepStrictEqual(top.filter(l => !l.startsWith(' ')), ['Target', 'Status', 'Options']);
+			assert.deepStrictEqual(top.filter(l => !l.startsWith(' ')), ['Steps', 'More', 'Target', 'Status', 'Options']);
+			assert.ok(top.some(l => /^ {2}Build — /.test(l)));
 			assert.ok(top.some(l => /^ {2}Architecture — /.test(l)));
 			assert.ok(top.some(l => /^ {2}Build — Debug/.test(l)));
 			assert.ok(top.some(l => /^ {2}VM — stopped/.test(l)));

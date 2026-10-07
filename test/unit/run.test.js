@@ -376,15 +376,25 @@ describe('kernel view and pickers', () => {
 	}
 	const labels = async (v, item) => Promise.all((await v.getChildren(item)).map(async i => `${i.label}${i.description ? ` — ${i.description}` : ''}`));
 
-	it('shows the target, status and options', async () => {
-		const { v, s } = view();
-		const [target, status, options] = await v.getChildren();
-		assert.deepStrictEqual([target.label, status.label, options.label], ['Target', 'Status', 'Options']);
+	it('shows the steps, more actions, target, status and options', async () => {
+		const { v, s, runner } = view();
+		const [steps, more, target, status, options] = await v.getChildren();
+		assert.deepStrictEqual([steps.label, more.label, target.label, status.label, options.label], ['Steps', 'More', 'Target', 'Status', 'Options']);
+		const rows = await v.getChildren(steps);
+		assert.deepStrictEqual(rows.map(r => [r.label, r.command.command]), [['Configure', 'kernelDev.configure'], ['Build', 'kernelDev.build'],
+			['Run', 'kernelDev.run'], ['Debug', 'kernelDev.debug']]);
+		assert.match(rows[1].description, /not configured yet/);
+		assert.ok((await v.getChildren(more)).every(r => r.command && r.contextValue === 'step'));
+		Object.defineProperty(runner, 'running', { value: true, configurable: true });
+		assert.deepStrictEqual((await v.getChildren((await v.getChildren())[0])).map(r => r.label), ['Configure', 'Build', 'Stop VM']);
+		delete runner.running;
+		const arch = (await v.getChildren(target))[0];
+		assert.deepStrictEqual([arch.command.command, arch.command.arguments[0]], ['kernelDev.editItem', arch], 'a click changes the value');
 		assert.deepStrictEqual(await labels(v, target), [`Architecture — ${s.arch}${require('../../src/arch').isNative(s.arch) ? '' : ' (cross)'}`, 'Build — Debug', 'Base config — defconfig']);
 		assert.deepStrictEqual((await labels(v, status)).slice(0, 3), ['Configured — not yet', 'Built — not yet', 'VM — stopped']);
 		assert.strictEqual((await v.getChildren(options)).length, OPTIONS.length);
 		v.setTools('build: flex', 'sudo apt-get install flex', ['flex (flex)']);
-		const tools = (await v.getChildren((await v.getChildren())[1])).find(i => i.label === 'Tools');
+		const tools = (await v.getChildren((await v.getChildren())[3])).find(i => i.label === 'Tools');
 		assert.strictEqual(tools.contextValue, 'toolsMissing');
 	});
 

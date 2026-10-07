@@ -195,6 +195,21 @@ class BisectTree {
 		const items = [];
 		if (b.busy)
 			items.push(new Item(b.busy, { icon: 'loading~spin' }));
+		const act = (/** @type {string} */ label, /** @type {string} */ command, /** @type {string} */ icon, /** @type {string} */ description) =>
+			new Item(label, { icon, description, tooltip: `Click to ${label.toLowerCase()}`, command: { command, title: label } });
+		if (b.active)
+			items.push(new Item('Actions', { icon: 'play-circle', children: [
+				act('Build', 'kernelDev.build', 'tools', 'build the commit under test'),
+				act('Run', 'kernelDev.run', 'play', 'boot it in QEMU'),
+				act('Mark good', 'kernelDev.bisect.good', 'pass', 'git bisect good'),
+				act('Mark bad', 'kernelDev.bisect.bad', 'error', 'git bisect bad'),
+				act('Skip', 'kernelDev.bisect.skip', 'debug-step-over', 'git bisect skip'),
+				act('Reset', 'kernelDev.bisect.reset', 'discard', 'git bisect reset'),
+			] }));
+		else if (b.result)
+			items.push(new Item('Actions', { icon: 'play-circle', children: [
+				act('Start another bisect…', 'kernelDev.bisect.start', 'debug-start', 'git bisect start'),
+			] }));
 		if (b.result)
 			items.push(new Item(b.result.subject, {
 				description: `first bad commit · ${b.result.hash.slice(0, 12)}`, icon: 'bug', color: 'problemsErrorIcon.foreground',

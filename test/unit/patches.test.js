@@ -57,7 +57,12 @@ describe('series', () => {
 		assert.strictEqual(series.info.base, 'base');
 		assert.deepStrictEqual(series.info.commits.map(c => c.hash), [c1, c2]);
 		const labels = (await view.getChildren()).map(i => i.label);
-		assert.deepStrictEqual(labels, ['Base', 'Version', 'Commits', 'Working changes', 'Check options', 'Patches']);
+		assert.deepStrictEqual(labels, ['Actions', 'Base', 'Version', 'Commits', 'Working changes', 'Check options', 'Patches']);
+		const [actions, base] = await view.getChildren();
+		assert.deepStrictEqual((await view.getChildren(actions)).map(i => [i.label, i.command.command]), [
+			['Check series', 'kernelDev.series.check'], ['Check working changes', 'kernelDev.series.checkWorking'],
+			['Fill recipients', 'kernelDev.series.fillRecipients'], ['Generate patches', 'kernelDev.series.generate']]);
+		assert.strictEqual(base.command.command, 'kernelDev.series.pickBase', 'a click on Base picks a base');
 
 		mock.state.config['kernelDev.patches.base'] = 'no-such-ref';
 		await series.refresh();
@@ -294,7 +299,8 @@ describe('apply', () => {
 		assert.deepStrictEqual([apply.am.next, apply.am.last], [1, 2]);
 		assert.deepStrictEqual(apply.am.conflicts, ['a.c']);
 		const tree = await view.getChildren();
-		assert.match(tree[0].label, /^git am stopped at patch 1\/2$/);
+		assert.deepStrictEqual((await view.getChildren(tree[0])).map(i => i.label), ['Continue', 'Skip this patch', 'Abort']);
+		assert.match(tree[1].label, /^git am stopped at patch 1\/2$/);
 		await apply.resolve('continue');
 		assert.match(mock.state.log.pop().message, /conflict markers left in a\.c/);
 		r.write('a.c', 'int a;\nint local;\n');
@@ -368,7 +374,7 @@ describe('bisect', () => {
 		assert.strictEqual(bisect.result.hash, bad);
 		assert.strictEqual(bisect.result.subject, 'step 6');
 		const items = await view.getChildren();
-		assert.strictEqual(items[0].contextValue, 'result');
+		assert.ok(items.some(i => i.contextValue === 'result'));
 		await mock.vscode.commands.executeCommand('kernelDev.bisect.copyFixes');
 		assert.match(mock.state.clipboard, /\("step 6"\)$/);
 		await bisect.reset();

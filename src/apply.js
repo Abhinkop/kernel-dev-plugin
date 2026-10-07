@@ -297,6 +297,8 @@ class Item extends vscode.TreeItem {
 		this.option = o.option;
 		if (o.command)
 			this.command = o.command;
+		else if (o.contextValue === 'edit')
+			this.command = { command: 'kernelDev.editItem', title: 'Change…', arguments: [this] };
 	}
 }
 
@@ -338,6 +340,18 @@ class ApplyTree {
 		const items = [];
 		if (a.busy)
 			items.push(new Item(a.busy, { icon: 'loading~spin' }));
+		const act = (/** @type {string} */ label, /** @type {string} */ command, /** @type {string} */ icon, /** @type {string} */ description) =>
+			new Item(label, { icon, description, contextValue: 'action', tooltip: `Click to ${label.toLowerCase()}`, command: { command, title: label } });
+		if (a.am || a.fetched)
+			items.push(new Item('Actions', { icon: 'play-circle', children: a.am ? [
+				act('Continue', 'kernelDev.apply.continue', 'debug-continue', 'git am --continue (after resolving)'),
+				act('Skip this patch', 'kernelDev.apply.skip', 'debug-step-over', 'git am --skip'),
+				act('Abort', 'kernelDev.apply.abort', 'close', 'git am --abort'),
+			] : [
+				act('Apply to current branch', 'kernelDev.apply.applyCurrent', 'check', 'git am -3'),
+				act('Apply on new branch…', 'kernelDev.apply.applyNewBranch', 'git-branch', 'new branch at the base, then git am -3'),
+				act('Fetch another series…', 'kernelDev.apply.fetch', 'cloud-download', 'b4 am from lore'),
+			] }));
 		if (a.am) {
 			items.push(new Item(`git am stopped at patch ${a.am.next}/${a.am.last}`, {
 				description: a.am.subject, icon: 'warning', color: 'problemsWarningIcon.foreground',

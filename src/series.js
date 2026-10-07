@@ -298,6 +298,15 @@ function summary(r) {
 	return { text: parts.join(', ') || 'clean', cls: r.errors ? 'error' : r.warnings || r.checks ? 'warn' : 'ok' };
 }
 
+/** What a click on a value row opens. */
+/** @type {Record<string, string>} */
+const CLICK = {
+	base: 'kernelDev.series.pickBase',
+	prefix: 'kernelDev.series.editPrefix',
+	cover: 'kernelDev.series.editCover',
+	edit: 'kernelDev.editItem',
+};
+
 class Item extends vscode.TreeItem {
 	/**
 	 * @param {string} label
@@ -316,6 +325,8 @@ class Item extends vscode.TreeItem {
 		this.children = o.children;
 		if (o.command)
 			this.command = o.command;
+		else if (o.contextValue && CLICK[o.contextValue])
+			this.command = { command: CLICK[o.contextValue], title: label, arguments: [this] };
 		/** @type {string | undefined} commit hash, 'working', or a file path */
 		this.ref = o.id;
 		this.option = o.option;
@@ -385,6 +396,7 @@ class SeriesTree {
 		const items = [];
 		if (se.busy)
 			items.push(new Item(se.busy, { icon: 'loading~spin' }));
+		items.push(this.actionsGroup());
 		items.push(
 			new Item('Base', { description: `${se.info.base} (${se.info.mergeBase.slice(0, 12)})`, icon: 'git-branch', contextValue: 'base' }),
 			new Item('Version', { description: `v${se.version}`, icon: 'versions', contextValue: 'version' }),
@@ -439,6 +451,23 @@ class SeriesTree {
 				});
 			}),
 		});
+	}
+
+	actionsGroup() {
+		const act = (/** @type {string} */ label, /** @type {string} */ command, /** @type {string} */ icon, /** @type {string} */ description) =>
+			new Item(label, { icon, description, contextValue: 'action', tooltip: `Click to ${label.toLowerCase()}`, command: { command, title: label } });
+		const n = this.series.info.commits.length;
+		const children = [
+			act('Check series', 'kernelDev.series.check', 'checklist', `checkpatch${n ? ` on ${n} commit${n > 1 ? 's' : ''}` : ''} + build checks`),
+			act('Check working changes', 'kernelDev.series.checkWorking', 'edit', 'checkpatch on uncommitted changes'),
+			act('Fill recipients', 'kernelDev.series.fillRecipients', 'person-add', 'To/Cc from get_maintainer.pl'),
+			act('Generate patches', 'kernelDev.series.generate', 'package', 'git format-patch'),
+		];
+		if (this.patches.output)
+			children.push(act('Dry run', 'kernelDev.series.dryRun', 'debug-alt', 'git send-email --dry-run'));
+		if (this.sender.dryRunCurrent())
+			children.push(act('Send…', 'kernelDev.series.send', 'send', 'git send-email'));
+		return new Item('Actions', { icon: 'play-circle', children });
 	}
 
 	patchesGroup() {

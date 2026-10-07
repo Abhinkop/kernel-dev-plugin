@@ -58,14 +58,25 @@ class Item extends vscode.TreeItem {
 		this.option = o.option;
 		if (o.command)
 			this.command = o.command;
+		else if (o.contextValue === 'edit')
+			this.command = { command: 'kernelDev.editItem', title: 'Change…', arguments: [this] };
 	}
 }
 
 /**
- * The Kernel view: the target (architecture, Debug/Release, base config),
- * the state of each step, and the options the steps use. Values are
- * changed with the edit action on each item; Configure, Build, Run and
- * Debug are in the view's toolbar.
+ * A row that runs a command when clicked.
+ * @param {string} label @param {string} command @param {string} icon @param {string} [description] @param {string} [tooltip]
+ */
+function action(label, command, icon, description, tooltip) {
+	return new Item(label, { icon, description, tooltip: tooltip || `Click to ${label.toLowerCase()}`, contextValue: 'step',
+		command: { command, title: label } });
+}
+
+/**
+ * The Kernel view: the steps (Configure, Build, Run, Debug) and other
+ * actions as rows that run on a click, the target (architecture,
+ * Debug/Release, base config), the state of each step, and the options
+ * the steps use, which open their picker on a click.
  * @implements {vscode.TreeDataProvider<Item>}
  */
 class KernelView {
@@ -123,7 +134,43 @@ class KernelView {
 	getChildren(item) {
 		if (item)
 			return item.children || [];
-		return [this.targetGroup(), this.statusGroup(), this.optionsGroup()];
+		return [this.stepsGroup(), this.moreGroup(), this.targetGroup(), this.statusGroup(), this.optionsGroup()];
+	}
+
+	stepsGroup() {
+		const s = this.s;
+		const target = `${s.arch} ${s.variant === 'debug' ? 'Debug' : 'Release'}`;
+		const state = s.configured();
+		const vm = this.runner.running;
+		return new Item('Steps', {
+			icon: 'list-ordered',
+			children: [
+				action('Configure', 'kernelDev.configure', 'gear', `${target} from ${path.basename(s.config)}`,
+					`Configure ${target} from ${s.config} into ${s.buildDir()}`),
+				action('Build', 'kernelDev.build', 'tools', state ? target : `${target} (not configured yet)`),
+				vm ? action('Stop VM', 'kernelDev.stop', 'debug-stop', 'the VM is running')
+					: action('Run', 'kernelDev.run', 'play', `${target} in QEMU`, `Boot the ${target} kernel in QEMU`),
+				...(vm ? [] : [action('Debug', 'kernelDev.debug', 'debug-alt', `${target} in QEMU + gdb`, `Boot the ${target} kernel in QEMU and attach the debugger`)]),
+			],
+		});
+	}
+
+	moreGroup() {
+		return new Item('More', {
+			icon: 'ellipsis',
+			collapsed: true,
+			children: [
+				action('menuconfig', 'kernelDev.menuconfig', 'settings-gear', '', 'Run make menuconfig in a terminal'),
+				action('nconfig', 'kernelDev.nconfig', 'settings-gear', '', 'Run make nconfig in a terminal'),
+				action('Clean', 'kernelDev.clean', 'trash', 'make clean'),
+				action('Rebuild', 'kernelDev.rebuild', 'refresh', 'make clean, then build'),
+				action('Full clean', 'kernelDev.mrproper', 'clear-all', 'make mrproper (removes .config)'),
+				action('Build modules', 'kernelDev.buildModules', 'package', 'make modules'),
+				action('Check devicetree', 'kernelDev.dt.checkChanged', 'checklist', 'dtbs_check on changed files'),
+				action('Check tools', 'kernelDev.checkTools', 'search', 'are the required tools installed?'),
+				action('Open settings', 'kernelDev.openSettings', 'settings', 'all Kernel Workbench settings'),
+			],
+		});
 	}
 
 	targetGroup() {
@@ -133,7 +180,7 @@ class KernelView {
 			icon: 'target',
 			children: [
 				new Item('Architecture', { description: `${s.arch}${isNative(s.arch) ? '' : ' (cross)'}`, icon: 'chip',
-					contextValue: 'edit', command: undefined, tooltip: 'kernelDev.arch', option: { key: '$arch', label: 'Architecture', kind: 'enum' } }),
+					contextValue: 'edit', tooltip: 'kernelDev.arch', option: { key: '$arch', label: 'Architecture', kind: 'enum' } }),
 				new Item('Build', { description: s.variant === 'debug' ? 'Debug' : 'Release', icon: s.variant === 'debug' ? 'bug' : 'rocket',
 					contextValue: 'edit', option: { key: '$variant', label: 'Build', kind: 'enum' } }),
 				new Item('Base config', { description: configs, icon: 'file-code', tooltip: s.config,
