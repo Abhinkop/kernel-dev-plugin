@@ -202,7 +202,7 @@ class Series {
 		const sparse = this.s.get('check.sparse', false);
 		const extra = ['W=1', ...(sparse ? ['C=2'] : [])];
 		const logFile = path.join(os.tmpdir(), `kernel-dev-check-${process.pid}.log`);
-		const make = ['make', ...state.makeArgs, this.s.jobs(), '-k', ...extra, ...objs].map(sq).join(' ');
+		const make = ['make', ...this.s.makeArgs(state), this.s.jobs(), '-k', ...extra, ...objs].map(sq).join(' ');
 		// The output is kept to count findings and to notice that Kbuild
 		// skipped sparse, which it only mentions in passing.
 		const code = await runTask(this.s.folder, `Check build ${extra.join(' ')} (${objs.length} files)`, 'bash',

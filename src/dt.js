@@ -143,7 +143,7 @@ class DtChecks {
 		const t = targets(this.root, karch, files);
 		if (!full && !t.dtbs.length && !t.schemas.length)
 			return 'no devicetree files changed';
-		const make = (/** @type {string[]} */ ...a) => ['make', ...state.makeArgs, this.s.jobs(), ...a].map(sq).join(' ');
+		const make = (/** @type {string[]} */ ...a) => ['make', ...this.s.makeArgs(state), this.s.jobs(), ...a].map(sq).join(' ');
 		const steps = full ? [make('dtbs_check')] : [
 			// An up-to-date .dtb is not checked again; remove the targets
 			// (build output) so they are rebuilt and validated.

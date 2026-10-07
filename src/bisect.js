@@ -123,7 +123,7 @@ class Bisect {
 		fs.writeFileSync(wrapper, [
 			'#!/bin/sh',
 			'# Written by the Kernel Dev extension for git bisect run.',
-			`make ${state.makeArgs.map(sq).join(' ')} ${this.s.jobs()} >/dev/null 2>&1 || { echo "bisect: build failed at $(git log -1 --format=%h), skipping"; exit 125; }`,
+			`make ${this.s.makeArgs(state).map(sq).join(' ')} ${this.s.jobs()} >/dev/null 2>&1 || { echo "bisect: build failed at $(git log -1 --format=%h), skipping"; exit 125; }`,
 			`exec ${sq(abs)} ${sq(state.buildDir)}`,
 			'',
 		].join('\n'), { mode: 0o755 });

@@ -268,15 +268,18 @@ describe('kbuild', () => {
 		repo.remove();
 	});
 
-	it('builds with the recorded arguments and regenerates compile_commands.json', async () => {
+	it('builds with the recorded toolchain and the current extra arguments', async () => {
 		const { s, kb, log, repo } = fake();
+		mock.state.config['kernelDev.make.args'] = ['KCFLAGS=-Og'];
 		await kb.configure();
-		mock.state.config['kernelDev.make.args'] = ['W=1']; // changed after Configure: not used
+		mock.state.config['kernelDev.make.args'] = ['W=1']; // changed after Configure
+		mock.state.config['kernelDev.toolchain'] = 'llvm'; // needs a new Configure: not used
 		assert.strictEqual(await kb.build(), 0);
 		const builds = log().split('\n').filter(l => /^make /.test(l) && !/defconfig|olddefconfig/.test(l));
 		assert.ok(builds.some(l => / compile_commands\.json$/.test(l)));
-		assert.ok(builds.every(l => !/W=1/.test(l)), 'Build uses what Configure recorded');
-		assert.ok(s.configured());
+		assert.ok(builds.every(l => / W=1 /.test(l) && !/KCFLAGS/.test(l)), 'the extra arguments as set now');
+		assert.ok(builds.every(l => /CROSS_COMPILE=/.test(l) && !/LLVM=1/.test(l)), 'the toolchain the .config was made with');
+		assert.deepStrictEqual(s.makeArgs(s.configured()).slice(-1), ['W=1']);
 		repo.remove();
 	});
 

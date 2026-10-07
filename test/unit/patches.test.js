@@ -390,7 +390,7 @@ describe('bisect', () => {
 		fs.writeFileSync(path.join(bin, 'make'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
 		process.env.PATH = `${bin}:${process.env.PATH}`;
 		const buildDir = tempDir();
-		const s = { root: r.dir, folder: { uri: mock.vscode.Uri.file(r.dir) }, get: (k, d) => d, jobs: () => '-j2',
+		const s = { root: r.dir, folder: { uri: mock.vscode.Uri.file(r.dir) }, get: (k, d) => d, jobs: () => '-j2', makeArgs: (st) => st.makeArgs,
 			configured: () => ({ arch: 'x86_64', variant: 'debug', buildDir, makeArgs: [`O=${buildDir}`] }) };
 		const { bisect } = registerBisect({ subscriptions: [], storageUri: mock.vscode.Uri.file(tempDir()) }, s);
 		const script = path.join(tempDir(), 'test.sh');

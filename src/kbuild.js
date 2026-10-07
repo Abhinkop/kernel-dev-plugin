@@ -108,12 +108,12 @@ class Kbuild {
 			if (!state)
 				return 1;
 		}
-		if (!this.checkTools(state.makeArgs, state.arch))
+		if (!this.checkTools(this.s.makeArgs(state), state.arch))
 			return 1;
 		const script = [
 			'set -e',
-			this.make(state.makeArgs),
-			this.make(state.makeArgs, 'compile_commands.json'),
+			this.make(this.s.makeArgs(state)),
+			this.make(this.s.makeArgs(state), 'compile_commands.json'),
 			`echo "==> ${state.arch} ${state.variant} built"`,
 		].join('\n');
 		const code = await runTask(this.folder, `Build ${state.arch} ${state.variant}`, 'bash', ['-c', script], {
@@ -128,13 +128,14 @@ class Kbuild {
 		const state = this.s.configured();
 		if (!state)
 			return 0;
-		return runTask(this.folder, `Clean ${state.arch} ${state.variant}`, 'bash', ['-c', this.make(state.makeArgs, 'clean')]);
+		return runTask(this.folder, `Clean ${state.arch} ${state.variant}`, 'bash', ['-c', this.make(this.s.makeArgs(state), 'clean')]);
 	}
 
 	/** Full clean: `make mrproper` on the selected build (removes .config and all build output). */
 	async mrproper() {
 		const s = this.s;
-		const makeArgs = (s.configured() || { makeArgs: s.makeArgsForConfigure() }).makeArgs;
+		const st = s.configured();
+		const makeArgs = st ? s.makeArgs(st) : s.makeArgsForConfigure();
 		const code = await runTask(this.folder, `Full clean ${s.arch} ${s.variant}`, 'bash', ['-c', this.make(makeArgs, 'mrproper')]);
 		if (code === 0)
 			s.clearConfigured();
@@ -148,7 +149,7 @@ class Kbuild {
 			vscode.window.showWarningMessage('Kernel: run Configure first.');
 			return 1;
 		}
-		return runTask(this.folder, `Modules ${state.arch} ${state.variant}`, 'bash', ['-c', this.make(state.makeArgs, 'modules')],
+		return runTask(this.folder, `Modules ${state.arch} ${state.variant}`, 'bash', ['-c', this.make(this.s.makeArgs(state), 'modules')],
 			{ problemMatcher: ['$gcc'] });
 	}
 
@@ -179,9 +180,9 @@ class Kbuild {
 		// <name>.mod next to each module's objects.
 		const script = [
 			'set -e',
-			this.make(state.makeArgs, `${rel}/`),
+			this.make(this.s.makeArgs(state), `${rel}/`),
 			`mods=$(cd ${sq(state.buildDir)} && find ${sq(rel)} -name '*.mod' 2>/dev/null | sed 's/[.]mod$/.ko/' || true)`,
-			`if [ -n "$mods" ]; then ${this.make(state.makeArgs)} $mods; echo "==> modules:"; echo "$mods"; fi`,
+			`if [ -n "$mods" ]; then ${this.make(this.s.makeArgs(state))} $mods; echo "==> modules:"; echo "$mods"; fi`,
 		].join('\n');
 		return runTask(this.folder, `Build ${rel}/`, 'bash', ['-c', script], { problemMatcher: ['$gcc'] });
 	}
@@ -196,7 +197,7 @@ class Kbuild {
 			cwd: this.root,
 			shellPath: 'bash',
 			// A clean exit closes the terminal; a failure stays to be read.
-			shellArgs: ['-c', `${this.make(state.makeArgs, tool)} || { echo; read -n1 -p "${tool} failed. Press a key to close."; exit 1; }`],
+			shellArgs: ['-c', `${this.make(this.s.makeArgs(state), tool)} || { echo; read -n1 -p "${tool} failed. Press a key to close."; exit 1; }`],
 		});
 		term.show();
 	}
@@ -219,7 +220,7 @@ class Kbuild {
 		}
 		const target = rel.replace(/\.[cS]$/, kind);
 		const code = await runTask(this.folder, `Compile ${path.basename(target)}`, 'bash',
-			['-c', this.make(state.makeArgs, target)], { problemMatcher: ['$gcc'] });
+			['-c', this.make(this.s.makeArgs(state), target)], { problemMatcher: ['$gcc'] });
 		if (code === 0 && kind !== '.o') {
 			const outFile = path.join(state.buildDir, target);
 			if (fs.existsSync(outFile))
