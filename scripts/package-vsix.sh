@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Build kernel-dev-<version>.vsix without node/vsce: a .vsix is a zip with
-# a manifest. Install with:  code --install-extension kernel-dev-*.vsix
-#                       or:  codium --install-extension kernel-dev-*.vsix
+# Build <name>-<version>.vsix without node/vsce: a .vsix is a zip with
+# a manifest. Install with:  code --install-extension kernel-workbench-*.vsix
+#                       or:  codium --install-extension kernel-workbench-*.vsix
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

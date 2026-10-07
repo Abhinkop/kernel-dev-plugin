@@ -1,4 +1,4 @@
-# Kernel Dev
+# Kernel Workbench
 
 Visual Studio-style Linux kernel development in VS Code and VSCodium. Install
 the extension and open a kernel source tree. Two tabs appear in the activity
@@ -288,9 +288,9 @@ you changed are reformatted.
 No Node.js needed:
 
 ```sh
-./scripts/package-vsix.sh            # -> kernel-dev-<version>.vsix
-code   --install-extension kernel-dev-<version>.vsix
-codium --install-extension kernel-dev-<version>.vsix
+./scripts/package-vsix.sh            # -> kernel-workbench-<version>.vsix
+code   --install-extension kernel-workbench-<version>.vsix
+codium --install-extension kernel-workbench-<version>.vsix
 ```
 
 Host packages (Debian/Ubuntu):

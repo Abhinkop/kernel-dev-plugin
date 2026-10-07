@@ -1,7 +1,7 @@
 {
-	"name": "kernel-dev",
-	"displayName": "Kernel Dev: Configure, Build, Run, Debug",
-	"description": "Visual Studio-style kernel development: Configure / Build / Run / Debug in QEMU, plus a Kernel Git tab for patch series (checkpatch, W=1, format-patch, send-email), applying series from lore, blame, file history and bisect. No per-workspace files.",
+	"name": "kernel-workbench",
+	"displayName": "Kernel Workbench",
+	"description": "Configure, build, run and debug the Linux kernel in QEMU, and prepare, check, send and apply patch series, with blame, file history, bisect and KUnit.",
 	"version": "0.7.0",
 	"publisher": "Abhinkop",
 	"license": "MIT",
@@ -28,7 +28,13 @@
 		"kbuild",
 		"qemu",
 		"gdb",
-		"clangd"
+		"clangd",
+		"checkpatch",
+		"git",
+		"patch",
+		"b4",
+		"kunit",
+		"devicetree"
 	],
 	"main": "./extension.js",
 	"extensionKind": [
