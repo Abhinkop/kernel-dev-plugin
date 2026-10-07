@@ -339,6 +339,11 @@
 				"command": "kernelDev.bisect.reset",
 				"title": "Bisect: Reset",
 				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.oops.decode",
+				"title": "Decode Stack Trace (selection or clipboard)",
+				"category": "Kernel"
 			}
 		],
 		"menus": {
@@ -570,6 +575,10 @@
 				{
 					"command": "kernelDev.bisect.reset",
 					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.oops.decode",
+					"when": "kernelDev.active"
 				}
 			],
 			"editor/context": [
@@ -602,6 +611,11 @@
 					"command": "kernelDev.blame.toggle",
 					"when": "kernelDev.active && (resourceScheme == file || resourceScheme == kernel-git && resourcePath =~ /^\\/blob\\//)",
 					"group": "kernelGit@0"
+				},
+				{
+					"command": "kernelDev.oops.decode",
+					"when": "kernelDev.active && editorHasSelection",
+					"group": "kernel@9"
 				}
 			],
 			"kernelDev.target": [

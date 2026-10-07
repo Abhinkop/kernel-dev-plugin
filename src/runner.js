@@ -27,6 +27,8 @@ class Runner {
 		this.kbuild = kbuild;
 		/** @type {vscode.Terminal | undefined} */
 		this.vm = undefined;
+		/** @type {((consoleLog: string, state: Configured) => void) | undefined} called when a QEMU VM boots */
+		this.onBoot = undefined;
 		context.subscriptions.push(
 			vscode.window.onDidCloseTerminal(t => {
 				if (t === this.vm)
@@ -210,12 +212,22 @@ class Runner {
 				'-kernel', this.kbuild.image(state),
 				...(initramfs ? ['-initrd', initramfs] : []),
 				'-append', [`console=${info.console}`, cmdline].filter(Boolean).join(' '),
+				// The console also goes to a log file for the crash watcher;
+				// mux=on keeps the Ctrl-A monitor keys of -nographic.
 				'-nographic',
+				'-chardev', `stdio,id=kdcon,mux=on,signal=off,logfile=${this.consoleLog(state)}`,
+				'-serial', 'chardev:kdcon',
+				'-mon', 'chardev=kdcon,mode=readline',
 				'-no-reboot',
 				...qemuArgs,
 				...gdbArgs,
 			],
 		};
+	}
+
+	/** @param {Configured} state */
+	consoleLog(state) {
+		return path.join(state.buildDir, 'kernel-dev', 'console.log');
 	}
 
 	/** @param {Configured} state @param {boolean} debug */
@@ -231,6 +243,12 @@ class Runner {
 			iconPath: new vscode.ThemeIcon(debug ? 'debug-alt' : 'vm-running'),
 		});
 		this.vm.show();
+		if (this.s.get('run.mode', 'qemu') !== 'virtme') {
+			const log = this.consoleLog(state);
+			fs.mkdirSync(path.dirname(log), { recursive: true });
+			fs.writeFileSync(log, '');
+			this.onBoot?.(log, state);
+		}
 	}
 
 	/** @returns {'cppdbg'|'gdb'|'lldb'} */

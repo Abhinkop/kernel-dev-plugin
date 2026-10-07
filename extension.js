@@ -18,6 +18,7 @@ const { registerBlame } = require('./src/blame');
 const { registerSeries } = require('./src/series');
 const { registerApply } = require('./src/apply');
 const { registerBisect } = require('./src/bisect');
+const { registerOops } = require('./src/oops');
 
 /** @param {vscode.ExtensionContext} context */
 function activate(context) {
@@ -31,6 +32,8 @@ function activate(context) {
 	const kbuild = new Kbuild(s);
 	const runner = new Runner(context, s, kbuild);
 	syncContextKeys(context, s, runner);
+	const oops = registerOops(context, s);
+	runner.onBoot = (log, state) => oops.watch(log, state);
 	const panel = new KernelPanel(context, s, kbuild, runner);
 	context.subscriptions.push(vscode.window.registerWebviewViewProvider('kernelDev.panel',
 		panel, { webviewOptions: { retainContextWhenHidden: true } }));
