@@ -14,7 +14,7 @@ trap 'rm -rf "$stage"' EXIT
 
 mkdir -p "$stage/extension"
 cp -r package.json extension.js src scripts media README.md CHANGELOG.md LICENSE "$stage/extension/"
-rm -f "$stage/extension/scripts/package-vsix.sh"
+rm -f "$stage/extension/scripts/package-vsix.sh" "$stage/extension/scripts/test.sh"
 
 python3 - "$stage" <<'EOF'
 import json, sys, html
