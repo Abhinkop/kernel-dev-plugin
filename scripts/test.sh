@@ -1,7 +1,7 @@
 #!/bin/sh
 # Run the test suite in a container: no Node.js needed on the host.
 #
-#   scripts/test.sh [all|unit|integration]
+#   scripts/test.sh [all|unit|integration|ui]
 #
 #   KWB_KERNEL_TREE  kernel tree for the integration tests (default ../linux-playground);
 #                    mounted read-only, the tests work on a clone of it
