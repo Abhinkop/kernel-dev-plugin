@@ -319,6 +319,26 @@
 				"command": "kernelDev.series.send",
 				"title": "Send Patches… (git send-email)",
 				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.bisect.good",
+				"title": "Bisect: Mark Good",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.bisect.bad",
+				"title": "Bisect: Mark Bad",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.bisect.skip",
+				"title": "Bisect: Skip",
+				"category": "Kernel"
+			},
+			{
+				"command": "kernelDev.bisect.reset",
+				"title": "Bisect: Reset",
+				"category": "Kernel"
 			}
 		],
 		"menus": {
@@ -533,6 +553,22 @@
 				},
 				{
 					"command": "kernelDev.series.send",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.bisect.good",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.bisect.bad",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.bisect.skip",
+					"when": "kernelDev.active"
+				},
+				{
+					"command": "kernelDev.bisect.reset",
 					"when": "kernelDev.active"
 				}
 			],
@@ -1210,6 +1246,13 @@
 					"id": "kernelDev.history",
 					"name": "File History",
 					"when": "kernelDev.active"
+				},
+				{
+					"type": "webview",
+					"id": "kernelDev.bisect",
+					"name": "Bisect",
+					"when": "kernelDev.active",
+					"visibility": "collapsed"
 				}
 			]
 		},

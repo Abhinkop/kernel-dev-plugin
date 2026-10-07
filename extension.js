@@ -17,6 +17,7 @@ const { registerHistory } = require('./src/history');
 const { registerBlame } = require('./src/blame');
 const { registerSeries } = require('./src/series');
 const { registerApply } = require('./src/apply');
+const { registerBisect } = require('./src/bisect');
 
 /** @param {vscode.ExtensionContext} context */
 function activate(context) {
@@ -40,6 +41,7 @@ function activate(context) {
 	registerApply(context, s.root);
 	registerBlame(context, s.root);
 	registerHistory(context, s.root);
+	registerBisect(context, s);
 
 	// Check the host for everything the current selection needs: when the
 	// extension loads and whenever arch / toolchain / run mode change. The
