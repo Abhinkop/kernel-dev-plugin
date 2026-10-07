@@ -1,0 +1,31 @@
+{
+	"name": "kernel-dev",
+	"displayName": "Kernel Dev: Configure, Build, Run, Debug",
+	"description": "Visual Studio-style Configure / Build / Run / Debug for the Linux kernel: a Kernel panel and editor toolbar with arch, Debug/Release and config; QEMU + gdb; clangd set up automatically. No per-workspace files.",
+	"version": "0.4.0",
+	"publisher": "ajose",
+	"license": "GPL-2.0",
+	"engines": {
+		"vscode": "^1.85.0"
+	},
+	"categories": [
+		"Programming Languages",
+		"Debuggers",
+		"Other"
+	],
+	"keywords": [
+		"linux",
+		"kernel",
+		"kbuild",
+		"qemu",
+		"gdb",
+		"clangd"
+	],
+	"main": "./extension.js",
+	"extensionKind": [
+		"workspace"
+	],
+	"activationEvents": [
+		"workspaceContains:Kbuild"
+	]
+}
