@@ -11,6 +11,7 @@ const { git } = require('./git');
  *   kernel-git:/commit/<hash>/<title>.diff          whole commit
  *   kernel-git:/full/<hash>/<title>.diff?<file>     whole commit, opened from <file>
  *   kernel-git:/file/<hash>/<title>.diff?<file>     only <file>'s part of the commit
+ *   kernel-git:/stat/<hash>/<title>.diff            message and file list only (huge commits)
  *   kernel-git:/blob/<rev>/<path>                   <path> as of <rev>
  *
  * The .diff suffix gives commits diff highlighting; blobs keep their own
@@ -23,6 +24,7 @@ class GitDocuments {
 	/** @param {string} root */
 	constructor(root) {
 		this.root = root;
+		providerRoot = root;
 	}
 
 	/**
@@ -48,6 +50,8 @@ class GitDocuments {
 		try {
 			if (kind === 'blob')
 				return await git(this.root, ['show', `${rev}:${rest.join('/')}`]);
+			if (kind === 'stat')
+				return await git(this.root, ['show', '--format=fuller', '--stat=200', '--no-color', rev]);
 			const args = ['show', '--format=fuller', '--stat', '--patch', '-M', '--no-color', rev];
 			if (kind === 'file' && file)
 				args.push('--', ...await this.namesIn(rev, file));
@@ -63,7 +67,7 @@ class GitDocuments {
 /**
  * @param {string} hash
  * @param {string} subject
- * @param {'commit'|'full'|'file'} kind
+ * @param {'commit'|'full'|'file'|'stat'} kind
  * @param {string} [file]
  */
 function commitUri(hash, subject, kind, file) {
@@ -76,6 +80,20 @@ function blobUri(rev, file) {
 	return vscode.Uri.from({ scheme: SCHEME, path: `/blob/${rev}/${file}` });
 }
 
+// Changed lines above which a whole commit is not opened.
+const HUGE = 200000;
+
+/** Lines added plus removed by a commit. @param {string} root @param {string} hash */
+async function changedLines(root, hash) {
+	const out = await git(root, ['show', '--numstat', '--format=', hash]);
+	let n = 0;
+	for (const line of out.split('\n')) {
+		const [a, d] = line.split('\t');
+		n += (+a || 0) + (+d || 0);
+	}
+	return n;
+}
+
 /**
  * Open a commit in an editor tab.
  * @param {string} root
@@ -84,7 +102,18 @@ function blobUri(rev, file) {
  */
 async function openCommit(root, rev, opts = {}) {
 	const [hash, subject] = (await git(root, ['log', '-1', '--format=%H%x00%s', rev])).trim().split('\0');
-	const kind = opts.file ? (opts.onlyFile ? 'file' : 'full') : 'commit';
+	/** @type {'commit'|'full'|'file'|'stat'} */
+	let kind = opts.file ? (opts.onlyFile ? 'file' : 'full') : 'commit';
+	// VS Code will not open a document over 50MB, which some commits are
+	// as a whole (the 2.6.12 import that much old code blames to): show
+	// only the file's part of those, or just the message and file list.
+	if (kind !== 'file') {
+		const lines = await changedLines(root, hash);
+		if (lines > HUGE) {
+			kind = opts.file ? 'file' : 'stat';
+			vscode.window.showInformationMessage(`Kernel: ${hash.slice(0, 12)} changes ${lines.toLocaleString()} lines; showing ${opts.file ? `only ${opts.file}` : 'its message and file list'}.`);
+		}
+	}
 	const doc = await vscode.workspace.openTextDocument(commitUri(hash, subject, kind, opts.file));
 	await vscode.window.showTextDocument(doc, { preview: false });
 }
@@ -98,13 +127,28 @@ async function toggleCommitView(uri, onlyFile) {
 	if (!uri || uri.scheme !== SCHEME)
 		return;
 	const [, , hash, ...rest] = uri.path.split('/');
-	const target = uri.with({ path: `/${onlyFile ? 'file' : 'full'}/${hash}/${rest.join('/')}` });
+	let kind = onlyFile ? 'file' : 'full';
+	if (!onlyFile && await changedLines(root(uri), hash) > HUGE) {
+		kind = 'stat';
+		vscode.window.showInformationMessage(`Kernel: ${hash.slice(0, 12)} is too large to show whole; showing its message and file list.`);
+	}
+	const target = uri.with({ path: `/${kind}/${hash}/${rest.join('/')}` });
 	// Replace the tab rather than piling up a second one.
 	if (vscode.window.activeTextEditor?.document.uri.toString() === uri.toString())
 		await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
 	const doc = await vscode.workspace.openTextDocument(target);
 	await vscode.window.showTextDocument(doc, { preview: false });
 }
+
+/**
+ * The kernel tree a kernel-git document belongs to (the provider's root).
+ * @param {vscode.Uri} _uri
+ */
+function root(_uri) {
+	return providerRoot;
+}
+/** @type {string} */
+let providerRoot = '';
 
 /**
  * Commit hash from a kernel-git commit URI.

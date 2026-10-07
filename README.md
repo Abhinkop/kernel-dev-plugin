@@ -233,6 +233,8 @@ you changed are reformatted.
 
 - **Annotations:** *Toggle Blame Annotations* (editor context menu) shows
   hash, date and author per line. Unsaved edits stay aligned.
+- **Click the hash** to open that commit in a full tab. A commit too large
+  for an editor tab (the 2.6.12 import) opens as just this file's part of it.
 - **Hover:** links to open the commit, blame before it, or copy its Fixes:
   line.
 - **Blame view:** follows the cursor. It shows the commit that last changed

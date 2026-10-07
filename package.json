@@ -2,7 +2,7 @@
 	"name": "kernel-dev",
 	"displayName": "Kernel Dev: Configure, Build, Run, Debug",
 	"description": "Visual Studio-style kernel development: Configure / Build / Run / Debug in QEMU, plus a Kernel Git tab for patch series (checkpatch, W=1, format-patch, send-email), applying series from lore, blame, file history and bisect. No per-workspace files.",
-	"version": "0.6.1",
+	"version": "0.6.2",
 	"publisher": "ajose",
 	"license": "GPL-2.0",
 	"engines": {
@@ -769,17 +769,17 @@
 				},
 				{
 					"command": "kernelDev.git.openOnLore",
-					"when": "resourceScheme == kernel-git && resourcePath =~ /^\\/(commit|full|file)\\//",
+					"when": "resourceScheme == kernel-git && resourcePath =~ /^\\/(commit|full|file|stat)\\//",
 					"group": "navigation@2"
 				},
 				{
 					"command": "kernelDev.git.copyFixes",
-					"when": "resourceScheme == kernel-git && resourcePath =~ /^\\/(commit|full|file)\\//",
+					"when": "resourceScheme == kernel-git && resourcePath =~ /^\\/(commit|full|file|stat)\\//",
 					"group": "1_kernel@1"
 				},
 				{
 					"command": "kernelDev.git.copyHash",
-					"when": "resourceScheme == kernel-git && resourcePath =~ /^\\/(commit|full|file)\\//",
+					"when": "resourceScheme == kernel-git && resourcePath =~ /^\\/(commit|full|file|stat)\\//",
 					"group": "1_kernel@2"
 				},
 				{

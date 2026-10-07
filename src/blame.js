@@ -150,24 +150,25 @@ function escapeMd(s) {
 }
 
 /**
- * Blame annotations in the editor: hash, author and date before each
- * line, shown once per run of lines from the same commit.
+ * Blame annotations in the editor: hash, date and author before each
+ * line, once per run of lines from the same commit. They are inlay hints
+ * rather than decorations because inlay hint parts can be clickable:
+ * clicking the hash opens the commit. Hovering shows the commit with
+ * more links.
+ * @implements {vscode.InlayHintsProvider}
  */
 class BlameAnnotations {
 	/** @param {string} root */
 	constructor(root) {
 		this.root = root;
-		this.decoration = vscode.window.createTextEditorDecorationType({
-			before: {
-				color: new vscode.ThemeColor('editorCodeLens.foreground'),
-				margin: '0 1.5em 0 0',
-				fontStyle: 'normal',
-			},
-		});
-		/** @type {Set<string>} documents with blame turned on */
+		/** @type {Map<string, { src: BlameSource, lines: BlameLine[] }>} documents with blame turned on */
+		this.blamed = new Map();
+		/** @type {Set<string>} */
 		this.on = new Set();
 		/** @type {Map<string, NodeJS.Timeout>} */
 		this.pending = new Map();
+		this._onDidChangeInlayHints = new vscode.EventEmitter();
+		this.onDidChangeInlayHints = this._onDidChangeInlayHints.event;
 	}
 
 	/** @param {vscode.TextEditor} editor */
@@ -175,7 +176,8 @@ class BlameAnnotations {
 		const key = editor.document.uri.toString();
 		if (this.on.has(key)) {
 			this.on.delete(key);
-			editor.setDecorations(this.decoration, []);
+			this.blamed.delete(key);
+			this._onDidChangeInlayHints.fire(undefined);
 		} else {
 			this.on.add(key);
 			await this.render(editor);
@@ -190,10 +192,11 @@ class BlameAnnotations {
 
 	/** @param {vscode.TextEditor} editor */
 	async render(editor) {
+		const key = editor.document.uri.toString();
 		const src = sourceOf(editor.document, this.root);
 		if (!src) {
 			vscode.window.showWarningMessage('Kernel: blame works on files in the kernel tree.');
-			this.on.delete(editor.document.uri.toString());
+			this.on.delete(key);
 			return;
 		}
 		let lines;
@@ -202,32 +205,53 @@ class BlameAnnotations {
 				() => blame(this.root, src));
 		} catch (e) {
 			vscode.window.showErrorMessage(`Kernel: git blame failed: ${/** @type {Error} */ (e).message}`);
-			this.on.delete(editor.document.uri.toString());
+			this.on.delete(key);
 			return;
 		}
-		if (!this.isOn(editor))
+		if (!this.on.has(key))
 			return;
+		this.blamed.set(key, { src, lines });
+		this._onDidChangeInlayHints.fire(undefined);
+	}
+
+	/**
+	 * @param {vscode.TextDocument} doc
+	 * @param {vscode.Range} range
+	 * @returns {vscode.InlayHint[]}
+	 */
+	provideInlayHints(doc, range) {
+		const entry = this.blamed.get(doc.uri.toString());
+		if (!entry)
+			return [];
+		const { src, lines } = entry;
 		const width = 36;
-		/** @type {vscode.DecorationOptions[]} */
-		const decorations = [];
-		let prev = '';
-		lines.forEach((b, i) => {
+		const hints = [];
+		for (let i = range.start.line; i <= Math.min(range.end.line, lines.length - 1); i++) {
+			const b = lines[i];
 			if (!b)
-				return;
-			const first = b.hash !== prev;
-			prev = b.hash;
-			let text = '';
-			if (first)
-				text = UNCOMMITTED.test(b.hash) ? 'not committed yet'
-					: `${b.hash.slice(0, 8)} ${day(b.time)} ${b.author}`;
-			text = text.length > width ? text.slice(0, width - 1) + '…' : text.padEnd(width, ' ');
-			decorations.push({
-				range: new vscode.Range(i, 0, i, 0),
-				hoverMessage: hoverFor(b, src),
-				renderOptions: { before: { contentText: text } },
-			});
-		});
-		editor.setDecorations(this.decoration, decorations);
+				continue;
+			const first = i === 0 || !lines[i - 1] || lines[i - 1].hash !== b.hash;
+			/** @type {vscode.InlayHintLabelPart[]} */
+			const parts = [];
+			if (!first) {
+				parts.push(new vscode.InlayHintLabelPart('\u00a0'.repeat(width)));
+			} else if (UNCOMMITTED.test(b.hash)) {
+				parts.push(new vscode.InlayHintLabelPart('not committed yet'.padEnd(width, '\u00a0')));
+			} else {
+				const hash = new vscode.InlayHintLabelPart(b.hash.slice(0, 8));
+				hash.command = { command: 'kernelDev.git.openCommit', title: 'Open commit', arguments: [b.hash, b.filename] };
+				hash.tooltip = hoverFor(b, src);
+				let rest = ` ${day(b.time)} ${b.author}`;
+				rest = rest.length > width - 8 ? rest.slice(0, width - 9) + '…' : rest.padEnd(width - 8, '\u00a0');
+				const restPart = new vscode.InlayHintLabelPart(rest);
+				restPart.tooltip = hoverFor(b, src);
+				parts.push(hash, restPart);
+			}
+			const hint = new vscode.InlayHint(new vscode.Position(i, 0), parts);
+			hint.paddingRight = true;
+			hints.push(hint);
+		}
+		return hints;
 	}
 
 	/**
@@ -511,7 +535,7 @@ function registerBlame(context, root) {
 
 	context.subscriptions.push(
 		view,
-		annotations.decoration,
+		vscode.languages.registerInlayHintsProvider([{ scheme: 'file' }, { scheme: SCHEME }], annotations),
 		view.onDidChangeVisibility(() => blameView.follow(vscode.window.activeTextEditor)),
 		vscode.window.onDidChangeTextEditorSelection(e => blameView.follow(e.textEditor)),
 		vscode.window.onDidChangeActiveTextEditor(e => {
