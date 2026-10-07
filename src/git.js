@@ -112,4 +112,40 @@ function relative(root, file) {
 	return rel && !rel.startsWith('..') && !require('path').isAbsolute(rel) ? rel.split(require('path').sep).join('/') : undefined;
 }
 
-module.exports = { git, gitStatus, log, fixesLine, exists, relative };
+/**
+ * Map a line number across a diff (`git diff -U0` output between an old
+ * and a new version of a file). Lines outside hunks shift by what the
+ * hunks before them added or removed; a line inside a hunk maps to the
+ * same position in the hunk's other side.
+ * @param {string} diff
+ * @param {number} line 1-based
+ * @param {'toOld'|'toNew'} direction
+ */
+function mapLine(diff, line, direction) {
+	let shift = 0;
+	for (const m of diff.matchAll(/^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/gm)) {
+		const old = { start: +m[1], count: m[2] === undefined ? 1 : +m[2] };
+		const neu = { start: +m[3], count: m[4] === undefined ? 1 : +m[4] };
+		const [from, to] = direction === 'toOld' ? [neu, old] : [old, neu];
+		// First line after the hunk on each side; a count of 0 means the
+		// hunk sits after line <start> (pure insertion or deletion).
+		const fromNext = from.count ? from.start + from.count : from.start + 1;
+		const toNext = to.count ? to.start + to.count : to.start + 1;
+		if (line < (from.count ? from.start : fromNext))
+			break;
+		if (line < fromNext)
+			return Math.max(1, to.start + Math.min(line - from.start, Math.max(to.count - 1, 0)));
+		shift = toNext - fromNext;
+	}
+	return Math.max(1, line + shift);
+}
+
+/**
+ * Where a line of `file` as of `rev` is in the working tree now.
+ * @param {string} root @param {string} rev @param {string} file @param {number} line
+ */
+async function lineInWorkingTree(root, rev, file, line) {
+	return mapLine(await git(root, ['diff', '-U0', '--no-color', rev, '--', file]), line, 'toNew');
+}
+
+module.exports = { git, gitStatus, log, fixesLine, exists, relative, mapLine, lineInWorkingTree };

@@ -4,7 +4,7 @@
 const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
-const { git, log, fixesLine, relative } = require('./git');
+const { git, log, fixesLine, relative, mapLine } = require('./git');
 const { SCHEME, blobUri, openCommit } = require('./commits');
 const { openOnLore } = require('./history');
 
@@ -409,9 +409,7 @@ async function firstChangedLine(root, commit, file) {
 
 /**
  * Map a line of `file` in `commit` to the corresponding line of `oldFile`
- * in `parent`, through the commit's diff: lines after a hunk shift by
- * what the hunk added or removed, and a line inside a hunk maps to the
- * same position in the hunk's old side.
+ * in `parent`, through the commit's diff.
  * @param {string} root
  * @param {string} parent @param {string} oldFile
  * @param {string} commit @param {string} file
@@ -419,20 +417,7 @@ async function firstChangedLine(root, commit, file) {
  */
 async function mapToParent(root, parent, oldFile, commit, file, line) {
 	const diff = await git(root, ['diff', '-U0', '--no-color', '-M', parent, commit, '--', oldFile, file]);
-	let shift = 0;
-	for (const m of diff.matchAll(/^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/gm)) {
-		const [oldStart, oldCount, newStart, newCount] = [+m[1], m[2] === undefined ? 1 : +m[2], +m[3], m[4] === undefined ? 1 : +m[4]];
-		// First line after the hunk on each side. A count of 0 means the
-		// hunk sits after line <start> (pure insertion or deletion).
-		const oldNext = oldCount ? oldStart + oldCount : oldStart + 1;
-		const newNext = newCount ? newStart + newCount : newStart + 1;
-		if (line < (newCount ? newStart : newNext))
-			break;
-		if (line < newNext) // inside the hunk
-			return Math.max(1, oldStart + Math.min(line - newStart, Math.max(oldCount - 1, 0)));
-		shift = oldNext - newNext;
-	}
-	return Math.max(1, line + shift);
+	return mapLine(diff, line, 'toOld');
 }
 
 /** @param {string} label */
