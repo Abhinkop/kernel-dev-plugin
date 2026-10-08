@@ -300,6 +300,19 @@ describe('kbuild', () => {
 		repo.remove();
 	});
 
+	it('opens menuconfig in an editor tab, closing on a clean exit', async () => {
+		const { kb, repo } = fake();
+		await kb.interactiveConfig('menuconfig');
+		assert.match(mock.state.log.pop().message, /run Configure first/);
+		await kb.configure();
+		await kb.interactiveConfig('menuconfig');
+		const t = mock.state.terminals.find(x => /^menuconfig /.test(x.name));
+		assert.strictEqual(t.options.location, mock.vscode.TerminalLocation.Editor, 'room for its 19x80 minimum');
+		assert.ok(t.shown);
+		assert.match(t.options.shellArgs[1], /make .* menuconfig \|\| \{ .*read -n1.*exit 1; \}$/, 'waits for a key only on failure');
+		repo.remove();
+	});
+
 	it('refuses to build when tools are missing', async () => {
 		const { s, repo } = fake();
 		const kb = new Kbuild(s);

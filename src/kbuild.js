@@ -187,13 +187,19 @@ class Kbuild {
 		return runTask(this.folder, `Build ${rel}/`, 'bash', ['-c', script], { problemMatcher: ['$gcc'] });
 	}
 
-	/** menuconfig / nconfig on the configured build, in a real terminal. @param {string} tool */
+	/**
+	 * menuconfig / nconfig on the configured build, in a terminal in the
+	 * editor area: they need at least 19 lines by 80 columns, more than
+	 * the terminal panel often has.
+	 * @param {string} tool
+	 */
 	async interactiveConfig(tool) {
 		const state = this.s.configured();
 		if (!state)
 			return vscode.window.showWarningMessage('Kernel: run Configure first.');
 		const term = vscode.window.createTerminal({
 			name: `${tool} ${state.arch} ${state.variant}`,
+			location: vscode.TerminalLocation.Editor,
 			cwd: this.root,
 			shellPath: 'bash',
 			// A clean exit closes the terminal; a failure stays to be read.

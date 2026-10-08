@@ -182,6 +182,7 @@ const vscode = {
 	ViewColumn: { Active: -1, Beside: -2, One: 1 },
 	TaskRevealKind: { Always: 1, Silent: 2, Never: 3 },
 	TaskPanelKind: { Shared: 1, Dedicated: 2, New: 3 },
+	TerminalLocation: { Panel: 1, Editor: 2 },
 	TaskGroup: { Build: { id: 'build' }, Test: { id: 'test' } },
 	TestRunProfileKind: { Run: 1, Debug: 2, Coverage: 3 },
 	TextEditorRevealType: { Default: 0, InCenter: 1 },
