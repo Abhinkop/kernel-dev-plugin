@@ -21,7 +21,7 @@ fi
 if [ "$what" = all ] || [ "$what" = integration ]; then
 	echo "== integration tests (VS Code${KWB_E2E:+, end to end})"
 	# VS Code's built-in AI components log a lot when not signed in; drop that.
-	NODE_V8_COVERAGE=$PWD/$cov xvfb-run -a node test/integration/run.js 2>&1 \
+	NODE_V8_COVERAGE=$PWD/$cov xvfb-run -a -s '-screen 0 1600x1000x24' node test/integration/run.js 2>&1 \
 		| grep --line-buffered -vE '^\[(AgentHost|RemoteAgentHost|ChatModelSelection|AccountPolicyGate)\]|Unknown channel: agentHost|DeprecationWarning: .url\.parse|trace-deprecation' \
 		| tee test-results/integration.txt
 fi

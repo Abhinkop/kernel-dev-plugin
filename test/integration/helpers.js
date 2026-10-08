@@ -56,4 +56,24 @@ function answer(name, answers) {
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-module.exports = { ID, tree, api, labels, child, git, answer, sleep, file: (p) => vscode.Uri.file(path.join(tree(), p)) };
+/**
+ * A minimal initramfs around the host's static busybox, built with the
+ * tree's usr/gen_init_cpio.c; its init prints KWB-INIT-RAN and starts a
+ * shell on the console.
+ * @returns {string} the .cpio
+ */
+function busyboxInitramfs() {
+	const fs = require('fs');
+	const os = require('os');
+	const work = fs.mkdtempSync(path.join(os.tmpdir(), 'kwb-initramfs-'));
+	execFileSync('cc', ['-O2', '-o', path.join(work, 'gen_init_cpio'), path.join(tree(), 'usr/gen_init_cpio.c')]);
+	fs.writeFileSync(path.join(work, 'init'), '#!/bin/busybox sh\n/bin/busybox --install -s\nmount -t proc proc /proc\nmount -t sysfs sysfs /sys\necho KWB-INIT-RAN\nexec sh\n', { mode: 0o755 });
+	fs.writeFileSync(path.join(work, 'list'), ['dir /dev 0755 0 0', 'nod /dev/console 0600 0 0 c 5 1', 'dir /proc 0755 0 0', 'dir /sys 0755 0 0',
+		'dir /mnt 0755 0 0', 'dir /bin 0755 0 0', 'dir /sbin 0755 0 0', 'dir /usr 0755 0 0', 'dir /usr/bin 0755 0 0', 'dir /usr/sbin 0755 0 0',
+		'file /bin/busybox /bin/busybox 0755 0 0', `file /init ${work}/init 0755 0 0`].join('\n'));
+	const cpio = path.join(work, 'initramfs.cpio');
+	fs.writeFileSync(cpio, execFileSync(path.join(work, 'gen_init_cpio'), [path.join(work, 'list')], { maxBuffer: 256 << 20 }));
+	return cpio;
+}
+
+module.exports = { ID, tree, api, labels, child, git, answer, sleep, busyboxInitramfs, file: (p) => vscode.Uri.file(path.join(tree(), p)) };

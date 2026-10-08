@@ -8,8 +8,13 @@ const path = require('path');
 const Mocha = require('mocha');
 
 exports.run = function () {
+	// KWB_GREP: only the tests whose title matches.
 	const mocha = new Mocha({ ui: 'bdd', timeout: 120000, color: false, reporter: 'spec' });
-	for (const f of fs.readdirSync(__dirname).filter(f => f.endsWith('.test.js')).sort())
+	if (process.env.KWB_GREP)
+		mocha.grep(new RegExp(process.env.KWB_GREP));
+	// KWB_ONLY: a regular expression for the test files to run.
+	const only = process.env.KWB_ONLY ? new RegExp(process.env.KWB_ONLY) : undefined;
+	for (const f of fs.readdirSync(__dirname).filter(f => f.endsWith('.test.js') && (!only || only.test(f))).sort())
 		mocha.addFile(path.join(__dirname, f));
 	return new Promise((resolve, reject) => {
 		mocha.run(failures => {

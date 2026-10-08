@@ -6,11 +6,10 @@
 
 const assert = require('assert');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const vscode = require('vscode');
-const { api, answer, tree, git } = require('./helpers');
+const { api, answer, tree, git, busyboxInitramfs } = require('./helpers');
 const { time, until } = require('./perf');
 
 const e2e = process.env.KWB_E2E === '1' ? describe : describe.skip;
@@ -57,15 +56,7 @@ e2e('End to end', function () {
 	});
 
 	it('boots in QEMU, and decodes a crash from the console', async () => {
-		// A minimal initramfs around the host's static busybox.
-		const work = fs.mkdtempSync(path.join(os.tmpdir(), 'kwb-initramfs-'));
-		execFileSync('cc', ['-O2', '-o', path.join(work, 'gen_init_cpio'), path.join(tree(), 'usr/gen_init_cpio.c')]);
-		fs.writeFileSync(path.join(work, 'init'), '#!/bin/busybox sh\n/bin/busybox --install -s\nmount -t proc proc /proc\necho KWB-INIT-RAN\nexec sh\n', { mode: 0o755 });
-		fs.writeFileSync(path.join(work, 'list'), ['dir /dev 0755 0 0', 'nod /dev/console 0600 0 0 c 5 1', 'dir /proc 0755 0 0', 'dir /bin 0755 0 0',
-			'dir /sbin 0755 0 0', 'dir /usr 0755 0 0', 'dir /usr/bin 0755 0 0', 'dir /usr/sbin 0755 0 0',
-			'file /bin/busybox /bin/busybox 0755 0 0', `file /init ${work}/init 0755 0 0`].join('\n'));
-		const cpio = path.join(work, 'initramfs.cpio');
-		fs.writeFileSync(cpio, execFileSync(path.join(work, 'gen_init_cpio'), [path.join(work, 'list')], { maxBuffer: 256 << 20 }));
+		const cpio = busyboxInitramfs();
 		await cfg().update('run.initramfs', { x86_64: cpio }, vscode.ConfigurationTarget.Workspace);
 		await cfg().update('run.kvm', fs.existsSync('/dev/kvm') ? 'auto' : 'off', vscode.ConfigurationTarget.Workspace);
 		await cfg().update('buildBeforeRun', false, vscode.ConfigurationTarget.Workspace);
