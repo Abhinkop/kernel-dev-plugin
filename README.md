@@ -34,9 +34,12 @@ The interface follows the [VS Code UX guidelines](https://code.visualstudio.com/
 
 ## Kernel tab
 
-The **Kernel** view has three groups. Each item shows its current value and
-has an edit action (pencil icon) that opens a quick pick or an input box.
+The **Kernel** view has five groups. Clicking a row does what it says.
 
+- **Steps:** Configure, Build, Run and Debug (Stop while a VM runs). Each
+  row says what it acts on, for example "x86_64 Debug from defconfig".
+- **More:** menuconfig, nconfig, Clean, Rebuild, Full clean, Build modules,
+  Check devicetree, Check tools and Open settings.
 - **Target:** Architecture (x86_64, arm64, riscv64), Build (Debug or Release)
   and Base config (`defconfig`, the arch's `*_defconfig` files, `tinyconfig`,
   or an existing `.config`).
@@ -48,6 +51,9 @@ has an edit action (pencil icon) that opens a quick pick or an input box.
   a step, boot mode, initramfs, sharing the build directory with the guest,
   kernel command line, QEMU arguments, memory and CPUs.
 
+Clicking a Target or Options row opens its quick pick or input box (an on/off
+option flips); right-clicking it offers the same, **Change…**.
+
 The view's toolbar has **Configure**, **Build**, **Run** and **Debug**, or
 **Stop** while a VM runs. Its **…** menu has menuconfig, nconfig, Clean,
 Rebuild, Full Clean (mrproper), Build Modules, DT Check, Check Required Tools
@@ -56,16 +62,24 @@ and Open Settings.
 | Step | Key | What it does |
 |---|---|---|
 | **Configure** | | Applies, in order: the base config, `configure.fragments`, the run-mode options, the Debug or Release options, then `configure.options`. Then it runs `make olddefconfig`. The make arguments (`O=`, `ARCH=`, toolchain, ccache, `make.args`) are recorded in the build directory. Requested options that Kconfig dropped are listed. |
-| **Build** | F7 | Runs `make` with exactly the recorded arguments (configuring first if needed), with errors in Problems, and refreshes `compile_commands.json` for clangd. |
+| **Build** | F7 | Runs `make` with the toolchain recorded at Configure and the extra make arguments as they are set now (configuring first if needed), with errors in Problems, and refreshes `compile_commands.json` for clangd. |
 | **Run** | Ctrl+F5 | Runs an incremental build, then boots the selected variant in QEMU, with your initramfs if one is set for the arch. |
 | **Debug** | F5 | Runs an incremental build, boots QEMU halted, runs to `start_kernel` and attaches gdb. Breakpoints work, including in initcalls, and the `lx-*` gdb commands are available. |
 
 - **Debug / Release** build into separate directories,
   `build/<arch>/debug` and `build/<arch>/release`, like Visual Studio's
   `x64\Debug`.
-- **Argument changes** take effect at the next Configure, as in CMake.
-- **Editor menu:** the editor toolbar's Kernel Workbench menu has the same
-  four steps and the target pickers.
+- **Toolchain changes** (GCC or LLVM, `CROSS_COMPILE`, ccache) take effect at
+  the next Configure, as in CMake, because the `.config` depends on them.
+  Extra make arguments (`W=1`, `KCFLAGS=…`) apply to the next Build.
+- **Terminals:** a step's terminal closes when the step succeeds and stays
+  open when it fails, so its errors can be read (Options → When a step
+  finishes → Keep the terminal open, to keep them all). The same goes for the
+  VM: a clean poweroff closes its terminal, a QEMU error keeps it.
+- **menuconfig and nconfig** open in an editor tab, where they have the 19
+  lines by 80 columns they need; they close when you exit and save.
+- **Editor toolbar:** Configure, Build, Run and Debug buttons, and the Kernel
+  Workbench menu with the target pickers.
 - **Right-click → Kernel Workbench:**
   - Compile Current File (**Ctrl+F7**), Preprocess (`.i`) and Show Assembly
     (`.s`);
@@ -335,7 +349,8 @@ src/oops.js, dt.js, kunit.js, clangd.js, tools.js, ui.js, tasks.js, git.js, arch
 ```sh
 scripts/test.sh                 # type check, unit, integration and UI tests, coverage
 scripts/test.sh unit            # unit tests only (also: integration, ui)
-KWB_E2E=1 scripts/test.sh       # also build, boot, crash and debug real kernels (about 25 minutes)
+KWB_E2E=1 scripts/test.sh       # also build, boot, crash and debug real kernels (about 30 minutes)
+KWB_E2E=1 KWB_ONLY=7-run scripts/test.sh integration   # one integration test file (KWB_GREP: by title)
 ```
 
 `scripts/test.sh` runs everything in a container (`test/docker/Dockerfile`),
@@ -365,6 +380,12 @@ so no Node.js is needed on the host.
   - arm64 and riscv64 (`KWB_CROSS`): configure and build with the cross
     compiler, boot to the root-mount panic and decode it, and hand a guest
     halted at `start_kernel` to the debugger.
+  - menuconfig in its terminal, driven with keystrokes: search, set
+    `LOCALVERSION`, save, and the terminal closes.
+  - Sharing the build directory over 9p: a module built in the tree
+    (`dummy.ko`) is loaded in the guest with `insmod` from `/mnt/kbuild`.
+  - virtme-ng: the kernel built with the virtme options boots on the host's
+    root file system and runs a command.
   - Real debugger: with the C/C++ extension installed in the test VS Code,
     Debug attaches and the session stops in `start_kernel`.
 
